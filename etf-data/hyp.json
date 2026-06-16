@@ -1,20 +1,119 @@
 {
-  "asset": "hyp",
-  "title": "Hyperliquid ETF Flow (US$m) \u2013 Farside Investors",
   "source": "https://farside.co.uk/hyp/",
-  "scrapedAt": "2026-06-16T15:30:51Z",
+  "scrapedAt": "2026-06-16T16:15:14.679786Z",
+  "inception": "2026-05-12",
+  "lastUpdated": "2026-06-15",
   "etfs": [
     "BHYP",
-    "THYP",
-    "HYPG"
+    "HYPG",
+    "THYP"
   ],
   "rows": [
+    {
+      "date": "2026-05-12",
+      "values": {
+        "BHYP": 0,
+        "HYPG": 0,
+        "THYP": 1.2
+      },
+      "total": 1.2
+    },
+    {
+      "date": "2026-05-13",
+      "values": {
+        "BHYP": 0,
+        "HYPG": 0,
+        "THYP": 1.4
+      },
+      "total": 1.4
+    },
+    {
+      "date": "2026-05-14",
+      "values": {
+        "BHYP": 0.7,
+        "HYPG": 0,
+        "THYP": 4.9
+      },
+      "total": 5.6
+    },
+    {
+      "date": "2026-05-15",
+      "values": {
+        "BHYP": 1.3,
+        "HYPG": 0,
+        "THYP": 3.1
+      },
+      "total": 4.4
+    },
+    {
+      "date": "2026-05-18",
+      "values": {
+        "BHYP": 2,
+        "HYPG": 0,
+        "THYP": 2.4
+      },
+      "total": 4.4
+    },
+    {
+      "date": "2026-05-19",
+      "values": {
+        "BHYP": 5.7,
+        "HYPG": 0,
+        "THYP": 5.3
+      },
+      "total": 11.0
+    },
+    {
+      "date": "2026-05-20",
+      "values": {
+        "BHYP": 8.8,
+        "HYPG": 0,
+        "THYP": 16.7
+      },
+      "total": 25.5
+    },
+    {
+      "date": "2026-05-21",
+      "values": {
+        "BHYP": 8.4,
+        "HYPG": 0,
+        "THYP": 7.7
+      },
+      "total": 16.1
+    },
+    {
+      "date": "2026-05-22",
+      "values": {
+        "BHYP": 11.0,
+        "HYPG": 0,
+        "THYP": 0.0
+      },
+      "total": 11.0
+    },
+    {
+      "date": "2026-05-26",
+      "values": {
+        "BHYP": 19.0,
+        "HYPG": 0,
+        "THYP": 1.4
+      },
+      "total": 20.4
+    },
+    {
+      "date": "2026-05-27",
+      "values": {
+        "BHYP": 1.7,
+        "HYPG": 0,
+        "THYP": 1.7
+      },
+      "total": 3.4
+    },
     {
       "date": "2026-05-28",
       "values": {
         "BHYP": 1.0,
-        "THYP": 0.7,
-        "HYPG": null
+        "HYPG": 0,
+        "THYP": 0.7
       },
       "total": 1.7
     },
@@ -22,8 +121,8 @@
       "date": "2026-05-29",
       "values": {
         "BHYP": 22.1,
-        "THYP": 9.5,
-        "HYPG": null
+        "HYPG": 0,
+        "THYP": 9.5
       },
       "total": 31.6
     },
@@ -31,8 +130,8 @@
       "date": "2026-06-01",
       "values": {
         "BHYP": 0.0,
-        "THYP": 1.3,
-        "HYPG": null
+        "HYPG": 0,
+        "THYP": 1.3
       },
       "total": 1.3
     },
@@ -40,8 +139,8 @@
       "date": "2026-06-02",
       "values": {
         "BHYP": 3.1,
-        "THYP": 0.0,
-        "HYPG": null
+        "HYPG": 0,
+        "THYP": 0.0
       },
       "total": 3.1
     },
@@ -49,8 +148,8 @@
       "date": "2026-06-03",
       "values": {
         "BHYP": 0.0,
-        "THYP": 3.0,
-        "HYPG": 0.5
+        "HYPG": 0.5,
+        "THYP": 3.0
       },
       "total": 3.5
     },
@@ -58,8 +157,8 @@
       "date": "2026-06-04",
       "values": {
         "BHYP": 7.5,
-        "THYP": 0.0,
-        "HYPG": 4.7
+        "HYPG": 4.7,
+        "THYP": 0.0
       },
       "total": 12.2
     },
@@ -67,8 +166,8 @@
       "date": "2026-06-05",
       "values": {
         "BHYP": -2.9,
-        "THYP": 0.0,
-        "HYPG": 0.0
+        "HYPG": 0.0,
+        "THYP": 0.0
       },
       "total": -2.9
     },
@@ -76,8 +175,8 @@
       "date": "2026-06-08",
       "values": {
         "BHYP": 1.8,
-        "THYP": 0.0,
-        "HYPG": 0.7
+        "HYPG": 0.7,
+        "THYP": 0.0
       },
       "total": 2.5
     },
@@ -85,8 +184,8 @@
       "date": "2026-06-09",
       "values": {
         "BHYP": 0.0,
-        "THYP": 0.0,
-        "HYPG": 0.0
+        "HYPG": 0.0,
+        "THYP": 0.0
       },
       "total": 0.0
     },
@@ -94,26 +193,26 @@
       "date": "2026-06-10",
       "values": {
         "BHYP": 1.8,
-        "THYP": 0.0,
-        "HYPG": 1.0
+        "HYPG": 1.0,
+        "THYP": 0.0
       },
       "total": 2.8
     },
     {
       "date": "2026-06-11",
       "values": {
-        "BHYP": 0.0,
-        "THYP": 0.0,
-        "HYPG": 0.6
+        "BHYP": 0,
+        "HYPG": 0.6,
+        "THYP": 0.0
       },
       "total": 0.6
     },
     {
       "date": "2026-06-12",
       "values": {
-        "BHYP": 0.0,
-        "THYP": 0.0,
-        "HYPG": 0.0
+        "BHYP": 0,
+        "HYPG": 0.0,
+        "THYP": 0.0
       },
       "total": 0.0
     },
@@ -121,19 +220,228 @@
       "date": "2026-06-15",
       "values": {
         "BHYP": 15.5,
-        "THYP": 0.0,
-        "HYPG": 1.7
+        "HYPG": 1.7,
+        "THYP": 0.0
       },
       "total": 17.2
+    }
+  ],
+  "aum": [
+    {
+      "date": "2026-05-12",
+      "values": {
+        "BHYP": 0,
+        "HYPG": 0,
+        "THYP": 1.2
+      },
+      "total": 1.2
     },
     {
-      "date": "2026-06-16",
+      "date": "2026-05-13",
       "values": {
-        "BHYP": null,
-        "THYP": null,
-        "HYPG": null
+        "BHYP": 0,
+        "HYPG": 0,
+        "THYP": 2.6
       },
-      "total": 0.0
+      "total": 2.6
+    },
+    {
+      "date": "2026-05-14",
+      "values": {
+        "BHYP": 0.7,
+        "HYPG": 0,
+        "THYP": 7.5
+      },
+      "total": 8.2
+    },
+    {
+      "date": "2026-05-15",
+      "values": {
+        "BHYP": 2,
+        "HYPG": 0,
+        "THYP": 10.6
+      },
+      "total": 12.6
+    },
+    {
+      "date": "2026-05-18",
+      "values": {
+        "BHYP": 4,
+        "HYPG": 0,
+        "THYP": 13
+      },
+      "total": 17.0
+    },
+    {
+      "date": "2026-05-19",
+      "values": {
+        "BHYP": 9.7,
+        "HYPG": 0,
+        "THYP": 18.3
+      },
+      "total": 28.0
+    },
+    {
+      "date": "2026-05-20",
+      "values": {
+        "BHYP": 18.5,
+        "HYPG": 0,
+        "THYP": 35
+      },
+      "total": 53.5
+    },
+    {
+      "date": "2026-05-21",
+      "values": {
+        "BHYP": 26.9,
+        "HYPG": 0,
+        "THYP": 42.7
+      },
+      "total": 69.6
+    },
+    {
+      "date": "2026-05-22",
+      "values": {
+        "BHYP": 37.9,
+        "HYPG": 0,
+        "THYP": 42.7
+      },
+      "total": 80.6
+    },
+    {
+      "date": "2026-05-26",
+      "values": {
+        "BHYP": 56.9,
+        "HYPG": 0,
+        "THYP": 44.1
+      },
+      "total": 101.0
+    },
+    {
+      "date": "2026-05-27",
+      "values": {
+        "BHYP": 58.6,
+        "HYPG": 0,
+        "THYP": 45.8
+      },
+      "total": 104.4
+    },
+    {
+      "date": "2026-05-28",
+      "values": {
+        "BHYP": 59.6,
+        "HYPG": 0,
+        "THYP": 46.5
+      },
+      "total": 106.1
+    },
+    {
+      "date": "2026-05-29",
+      "values": {
+        "BHYP": 81.7,
+        "HYPG": 0,
+        "THYP": 56
+      },
+      "total": 137.7
+    },
+    {
+      "date": "2026-06-01",
+      "values": {
+        "BHYP": 81.7,
+        "HYPG": 0,
+        "THYP": 57.3
+      },
+      "total": 139.0
+    },
+    {
+      "date": "2026-06-02",
+      "values": {
+        "BHYP": 84.8,
+        "HYPG": 0,
+        "THYP": 57.3
+      },
+      "total": 142.1
+    },
+    {
+      "date": "2026-06-03",
+      "values": {
+        "BHYP": 84.8,
+        "HYPG": 0.5,
+        "THYP": 60.3
+      },
+      "total": 145.6
+    },
+    {
+      "date": "2026-06-04",
+      "values": {
+        "BHYP": 92.3,
+        "HYPG": 5.2,
+        "THYP": 60.3
+      },
+      "total": 157.8
+    },
+    {
+      "date": "2026-06-05",
+      "values": {
+        "BHYP": 89.4,
+        "HYPG": 5.2,
+        "THYP": 60.3
+      },
+      "total": 154.9
+    },
+    {
+      "date": "2026-06-08",
+      "values": {
+        "BHYP": 91.2,
+        "HYPG": 5.9,
+        "THYP": 60.3
+      },
+      "total": 157.4
+    },
+    {
+      "date": "2026-06-09",
+      "values": {
+        "BHYP": 91.2,
+        "HYPG": 5.9,
+        "THYP": 60.3
+      },
+      "total": 157.4
+    },
+    {
+      "date": "2026-06-10",
+      "values": {
+        "BHYP": 93,
+        "HYPG": 6.9,
+        "THYP": 60.3
+      },
+      "total": 160.2
+    },
+    {
+      "date": "2026-06-11",
+      "values": {
+        "BHYP": 93,
+        "HYPG": 7.5,
+        "THYP": 60.3
+      },
+      "total": 160.8
+    },
+    {
+      "date": "2026-06-12",
+      "values": {
+        "BHYP": 93,
+        "HYPG": 7.5,
+        "THYP": 60.3
+      },
+      "total": 160.8
+    },
+    {
+      "date": "2026-06-15",
+      "values": {
+        "BHYP": 108.5,
+        "HYPG": 9.2,
+        "THYP": 60.3
+      },
+      "total": 178.0
     }
   ]
 }

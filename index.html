@@ -300,10 +300,11 @@ function coinColor(coinId) {
 }
 
 const trendState = {
-  windows: [], // { id, coinIds: [coinId], startDate, endDate, normalized, x, y, w, h }
+  windows: [], // { id, coinIds: [coinId], startDate, endDate, normalized, x, y, w, h, loading }
   applyToAll: false,
-  prices: {}, // cache: prices[coinId] = { days: { '30': { prices: [[ts, p], ...] } } }
+  prices: {}, // cache: prices[coinId] = { startMs, endMs, points: [[ts, p], ...] } (broadest range fetched)
   nextId: 1,
+  _inflight: {}, // dedup in-flight requests per coin
 };
 
 const STORAGE_KEY = 'crypto-dashboard-trends-v1';
@@ -402,6 +403,7 @@ function createTrendWindow(coinId, x, y) {
     normalized: false,
     x: px, y: py, w, h,
     measure: { active: false, startT: null, endT: null },
+    loading: false,
   };
   trendState.windows.push(win);
   if (trendState.applyToAll) {
@@ -552,6 +554,7 @@ function attachWindowHandlers(el, win) {
   // Date inputs
   const startIn = el.querySelector('.trend-start');
   const endIn = el.querySelector('.trend-end');
+  const debouncedFetch = debounce((w) => fetchAndDraw(w), 400);
   function dateChange() {
     if (startIn.value && endIn.value && startIn.value > endIn.value) {
       startIn.classList.add('invalid'); endIn.classList.add('invalid'); return;
@@ -574,10 +577,10 @@ function attachWindowHandlers(el, win) {
         if (!e2) return;
         e2.querySelector('.trend-start').value = w.startDate;
         e2.querySelector('.trend-end').value = w.endDate;
-        fetchAndDraw(w);
+        debouncedFetch(w);
       });
     }
-    fetchAndDraw(win);
+    debouncedFetch(win);
     saveTrendLayout();
   }
   startIn.addEventListener('change', dateChange);
@@ -723,49 +726,116 @@ function closeContextMenu() {
   document.querySelectorAll('.ctx-menu').forEach(el => el.remove());
 }
 
-// ============ CHART DRAWING ============
+// ============ DATA FETCHING (smart cache + concurrency) ============
 
-async function fetchAndDraw(win) {
-  if (win.coinIds.length === 0) return;
-  const days = daysBetween(win.startDate, win.endDate);
-  // Fetch all coins in parallel
-  await Promise.all(win.coinIds.map(coinId => fetchCoinHistory(coinId, days)));
-  // After all loaded, redraw
-  const el = document.querySelector(`.trend-window[data-id="${win.id}"]`);
-  if (el) drawTrendChart(win, el.querySelector('canvas'));
+function debounce(fn, ms) {
+  let t;
+  return function (...args) {
+    clearTimeout(t);
+    t = setTimeout(() => fn.apply(this, args), ms);
+  };
+}
+function dateStartMs(s) { return new Date(s + 'T00:00:00Z').getTime(); }
+function dateEndMs(s)   { return new Date(s + 'T23:59:59Z').getTime(); }
+function isEndCurrent(s) { return s >= new Date().toISOString().slice(0, 10); }
+
+// Concurrency-limited async map (workers share an index)
+async function pMapLimit(items, limit, fn) {
+  const results = new Array(items.length);
+  let i = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (i < items.length) {
+      const idx = i++;
+      try { results[idx] = await fn(items[idx], idx); }
+      catch (e) { results[idx] = null; }
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
-async function fetchCoinHistory(coinId, days) {
-  if (!trendState.prices[coinId]) trendState.prices[coinId] = {};
-  if (trendState.prices[coinId][days]) return trendState.prices[coinId][days];
-  // Map days to CoinGecko param
-  const cgDays = days > 365 ? 'max' : String(days);
-  const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${cgDays}`;
-  try {
+async function fetchCoinHistory(coinId, startDate, endDate) {
+  const startMs = dateStartMs(startDate);
+  const endMs   = dateEndMs(endDate);
+
+  // 1) Cache hit: fully covered → slice client-side, no fetch
+  const cached = trendState.prices[coinId];
+  if (cached && cached.startMs <= startMs && cached.endMs >= endMs) {
+    return cached.points.filter(p => p[0] >= startMs && p[0] <= endMs);
+  }
+
+  // 2) In-flight dedup: another window is already fetching this coin
+  if (trendState._inflight[coinId]) {
+    try { await trendState._inflight[coinId]; } catch {}
+    const c2 = trendState.prices[coinId];
+    if (c2 && c2.startMs <= startMs && c2.endMs >= endMs) {
+      return c2.points.filter(p => p[0] >= startMs && p[0] <= endMs);
+    }
+  }
+
+  // 3) Pick endpoint based on whether range touches "now"
+  //    - current: /market_chart?days=N  (5-min / hourly / daily granularity)
+  //    - historical: /market_chart/range  (exact [from, to] range)
+  let url;
+  if (isEndCurrent(endDate)) {
+    const days = Math.max(1, Math.ceil((Date.now() - startMs) / 86400000));
+    const cgDays = days > 365 ? 'max' : String(days);
+    url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${cgDays}`;
+  } else {
+    url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart/range?vs_currency=usd&from=${Math.floor(startMs / 1000)}&to=${Math.floor(endMs / 1000)}`;
+  }
+
+  const promise = (async () => {
     const r = await fetch(url);
     if (!r.ok) throw new Error('rate limited: ' + r.status);
     const data = await r.json();
-    // Filter to [startDate, endDate]
-    const startMs = new Date(win_startOfDay(coinId, days)).getTime();
-    const endMs = Date.now();
-    const filtered = data.prices.filter(p => p[0] >= startMs);
-    trendState.prices[coinId][days] = filtered;
-    return filtered;
+    const newPoints = data.prices || [];
+
+    // Merge into cache (union of all fetched ranges)
+    const c1 = trendState.prices[coinId];
+    if (c1) {
+      const map = new Map();
+      c1.points.forEach(p => map.set(p[0], p));
+      newPoints.forEach(p => map.set(p[0], p));
+      const merged = [...map.values()].sort((a, b) => a[0] - b[0]);
+      trendState.prices[coinId] = {
+        startMs: Math.min(c1.startMs, startMs),
+        endMs:   Math.max(c1.endMs, endMs),
+        points: merged,
+      };
+    } else {
+      trendState.prices[coinId] = { startMs, endMs, points: newPoints };
+    }
+  })();
+
+  trendState._inflight[coinId] = promise;
+  try {
+    await promise;
   } catch (e) {
     console.error('fetchCoinHistory', coinId, e);
-    return [];
+  } finally {
+    delete trendState._inflight[coinId];
   }
-}
-function win_startOfDay(coinId, days) {
-  // Use the start date of the first window referencing this coin. Approximate: now - days
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+
+  const c2 = trendState.prices[coinId];
+  if (!c2) return [];
+  return c2.points.filter(p => p[0] >= startMs && p[0] <= endMs);
 }
 
-function daysBetween(start, end) {
-  const a = new Date(start), b = new Date(end);
-  return Math.max(1, Math.round((b - a) / 86400000));
+async function fetchAndDraw(win) {
+  if (win.coinIds.length === 0) return;
+  if (win.loading) return; // already fetching
+  win.loading = true;
+  // Redraw now to show "Loading…" overlay (keeps stale data underneath)
+  const el = document.querySelector(`.trend-window[data-id="${win.id}"]`);
+  if (el) drawTrendChart(win, el.querySelector('canvas'));
+  try {
+    await pMapLimit(win.coinIds, 3, (coinId) => fetchCoinHistory(coinId, win.startDate, win.endDate));
+  } finally {
+    win.loading = false;
+    const el2 = document.querySelector(`.trend-window[data-id="${win.id}"]`);
+    if (el2) drawTrendChart(win, el2.querySelector('canvas'));
+  }
 }
 
 function drawTrendChart(win, canvas, hoverX = null) {
@@ -778,18 +848,20 @@ function drawTrendChart(win, canvas, hoverX = null) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, cssW, cssH);
 
-  const days = daysBetween(win.startDate, win.endDate);
-  // Gather series (keep raw for ruler)
+  const sMs = dateStartMs(win.startDate);
+  const eMs = dateEndMs(win.endDate);
+  // Gather series (keep raw for ruler) — filter cache by [startDate, endDate]
   const rawSeries = win.coinIds.map(coinId => {
-    const data = (trendState.prices[coinId] && trendState.prices[coinId][days]) || [];
+    const cache = trendState.prices[coinId];
+    const data = cache ? cache.points.filter(p => p[0] >= sMs && p[0] <= eMs) : [];
     return { coinId, data, color: coinColor(coinId) };
   }).filter(s => s.data.length > 1);
 
   if (rawSeries.length === 0) {
-    ctx.fillStyle = '#444';
+    ctx.fillStyle = '#666';
     ctx.font = '11px ui-monospace, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('Loading…', cssW / 2, cssH / 2);
+    ctx.fillText(win.loading ? 'Loading…' : 'No data', cssW / 2, cssH / 2);
     return;
   }
 
@@ -1090,6 +1162,23 @@ function drawTrendChart(win, canvas, hoverX = null) {
       });
     }
   }
+
+  // ---- LOADING BADGE (top-right of plot area) ----
+  if (win.loading) {
+    ctx.save();
+    const bx = padL + plotW - 96, by = padT + 4, bw = 92, bh = 18;
+    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⟳ LOADING…', bx + bw / 2, by + bh / 2);
+    ctx.restore();
+  }
 }
 
 // Find data point with timestamp closest to target t
@@ -1136,9 +1225,10 @@ function loadTrendLayout() {
     trendState.windows = data.windows || [];
     trendState.applyToAll = !!data.applyToAll;
     trendState.nextId = data.nextId || (Math.max(0, ...trendState.windows.map(w => w.id)) + 1);
-    // Ensure measure defaults
+    // Ensure measure + loading defaults
     trendState.windows.forEach(w => {
       if (!w.measure) w.measure = { active: false, startT: null, endT: null };
+      if (w.loading === undefined) w.loading = false;
     });
     document.getElementById('trend-sync-all').checked = trendState.applyToAll;
     renderTrendCanvas();

@@ -617,6 +617,23 @@ function attachWindowHandlers(el, win) {
       removeCoinFromWindow(win, item.dataset.coinId);
     });
   });
+
+  // ---- Ruler (hover crosshair) ----
+  const chartCanvas = el.querySelector('canvas');
+  let rulerRaf = null;
+  chartCanvas.addEventListener('mousemove', e => {
+    const rect = chartCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (rulerRaf) cancelAnimationFrame(rulerRaf);
+    rulerRaf = requestAnimationFrame(() => {
+      drawTrendChart(win, chartCanvas, x);
+    });
+  });
+  chartCanvas.addEventListener('mouseleave', () => {
+    if (rulerRaf) cancelAnimationFrame(rulerRaf);
+    drawTrendChart(win, chartCanvas, null);
+  });
+  chartCanvas.style.cursor = 'crosshair';
 }
 
 function showWindowContextMenu(x, y, win) {
@@ -699,7 +716,7 @@ function daysBetween(start, end) {
   return Math.max(1, Math.round((b - a) / 86400000));
 }
 
-function drawTrendChart(win, canvas) {
+function drawTrendChart(win, canvas, hoverX = null) {
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
   const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
@@ -710,13 +727,13 @@ function drawTrendChart(win, canvas) {
   ctx.clearRect(0, 0, cssW, cssH);
 
   const days = daysBetween(win.startDate, win.endDate);
-  // Gather series
-  const series = win.coinIds.map(coinId => {
+  // Gather series (keep raw for ruler)
+  const rawSeries = win.coinIds.map(coinId => {
     const data = (trendState.prices[coinId] && trendState.prices[coinId][days]) || [];
     return { coinId, data, color: coinColor(coinId) };
   }).filter(s => s.data.length > 1);
 
-  if (series.length === 0) {
+  if (rawSeries.length === 0) {
     ctx.fillStyle = '#444';
     ctx.font = '11px ui-monospace, monospace';
     ctx.textAlign = 'center';
@@ -724,6 +741,8 @@ function drawTrendChart(win, canvas) {
     return;
   }
 
+  // Make a working copy for normalization (preserve rawSeries[].data for ruler % calc)
+  const series = rawSeries.map(s => ({ coinId: s.coinId, color: s.color, data: s.data.map(p => [...p]) }));
   // Normalize if needed
   if (win.normalized) {
     series.forEach(s => {
@@ -781,6 +800,110 @@ function drawTrendChart(win, canvas) {
     });
     ctx.stroke();
   });
+
+  // ---- RULER (crosshair on hover) ----
+  if (hoverX != null && hoverX >= padL && hoverX <= padL + plotW) {
+    const tAtX = minT + ((hoverX - padL) / plotW) * (maxT - minT);
+    // Vertical line
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.moveTo(hoverX, padT);
+    ctx.lineTo(hoverX, padT + plotH);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Per-coin point + collect tooltip data
+    const tooltip = [];
+    rawSeries.forEach(rs => {
+      const dp = closestPoint(rs.data, tAtX);
+      if (!dp) return;
+      const ys = series.find(s => s.coinId === rs.coinId);
+      const yv = ys.data[dp.idx][1];
+      const x = padL + ((dp.t - minT) / (maxT - minT)) * plotW;
+      const y = padT + (1 - (yv - minV) / (maxV - minV)) * plotH;
+      // Dot
+      ctx.fillStyle = rs.color;
+      ctx.beginPath();
+      ctx.arc(x, y, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      // % change from start
+      const startVal = rs.data[0][1];
+      const pctChange = ((dp.v - startVal) / startVal) * 100;
+      tooltip.push({
+        coinId: rs.coinId,
+        sym: findCoin(rs.coinId)?.symbol.toUpperCase() || rs.coinId,
+        color: rs.color,
+        value: dp.v,
+        pct: pctChange,
+        y,
+      });
+    });
+    ctx.restore();
+
+    // Tooltip box
+    const date = new Date(tAtX);
+    const dateLbl = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const lineH = 16;
+    const boxW = 160;
+    const boxH = lineH * (1 + tooltip.length) + 12;
+    // Position: right of cursor if fits, else left
+    let boxX = hoverX + 12;
+    if (boxX + boxW > padL + plotW) boxX = hoverX - 12 - boxW;
+    let boxY = padT + 8;
+    if (boxY + boxH > padT + plotH) boxY = padT + plotH - boxH - 4;
+
+    ctx.fillStyle = 'rgba(10,10,10,0.95)';
+    ctx.strokeStyle = '#2a2a2a';
+    ctx.lineWidth = 1;
+    ctx.fillRect(boxX, boxY, boxW, boxH);
+    ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1);
+
+    ctx.font = '10px ui-monospace, monospace';
+    ctx.textBaseline = 'top';
+    // Date header
+    ctx.fillStyle = '#aaa';
+    ctx.textAlign = 'left';
+    ctx.fillText(dateLbl, boxX + 8, boxY + 6);
+    // Per-coin lines
+    tooltip.forEach((t, i) => {
+      const ly = boxY + 6 + lineH * (i + 1);
+      // Color dot
+      ctx.fillStyle = t.color;
+      ctx.beginPath();
+      ctx.arc(boxX + 12, ly + 5, 3, 0, Math.PI * 2);
+      ctx.fill();
+      // Symbol
+      ctx.fillStyle = '#ddd';
+      ctx.textAlign = 'left';
+      ctx.fillText(t.sym, boxX + 20, ly);
+      // Price (right-aligned)
+      ctx.fillStyle = '#ccc';
+      ctx.textAlign = 'right';
+      ctx.fillText(win.normalized ? t.value.toFixed(1) : fmtPrice(t.value), boxX + boxW - 56, ly);
+      // % change (right-aligned, color-coded)
+      ctx.fillStyle = t.pct >= 0 ? '#22c55e' : '#ef4444';
+      ctx.fillText(`${t.pct >= 0 ? '+' : ''}${t.pct.toFixed(2)}%`, boxX + boxW - 8, ly);
+    });
+  }
+}
+
+// Find data point with timestamp closest to target t
+function closestPoint(data, t) {
+  if (!data || data.length === 0) return null;
+  let lo = 0, hi = data.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (data[mid][0] < t) lo = mid + 1; else hi = mid;
+  }
+  // lo is first point with ts >= t; compare with previous
+  if (lo > 0 && Math.abs(data[lo - 1][0] - t) < Math.abs(data[lo][0] - t)) lo = lo - 1;
+  return { idx: lo, t: data[lo][0], v: data[lo][1] };
 }
 
 function formatChartValue(v, normalized) {

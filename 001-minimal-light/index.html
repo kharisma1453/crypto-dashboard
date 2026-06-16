@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Crypto Dashboard — Minimal Light</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .mono { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+  .up { color: #16a34a; }
+  .down { color: #dc2626; }
+  .skel { background: #f4f4f5; animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+  .spark { stroke-width: 1.5; fill: none; }
+  .card { transition: background .15s ease; }
+  .card:hover { background: #fafafa; }
+</style>
+</head>
+<body class="bg-white text-neutral-900 min-h-screen">
+<header class="border-b border-neutral-200">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="text-sm font-medium tracking-tight">Crypto Dashboard</div>
+      <div class="text-xs text-neutral-400 mono" id="lastUpdate">—</div>
+    </div>
+    <div class="flex items-center gap-2">
+      <div class="text-xs text-neutral-500" id="refreshHint">auto-refresh 30s</div>
+      <button id="refreshBtn" class="text-xs text-neutral-500 hover:text-neutral-900 px-2 py-1">↻</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-6 py-8">
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-px bg-neutral-200" id="grid">
+    <!-- 15 cards injected here -->
+  </div>
+</main>
+
+<footer class="max-w-6xl mx-auto px-6 py-6 text-xs text-neutral-400 flex items-center justify-between">
+  <div>via CoinGecko · top 15 by market cap</div>
+  <div class="mono" id="footerTime"></div>
+</footer>
+
+<script>
+const COINS = 15;
+let timer = null;
+
+async function fetchTop() {
+  const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COINS}&page=1&sparkline=true&price_change_percentage=24h`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('rate limited or network error: ' + r.status);
+  return await r.json();
+}
+
+function fmtPrice(n) {
+  if (n >= 1) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return n.toPrecision(3);
+}
+function fmtBig(n) {
+  if (n >= 1e12) return (n/1e12).toFixed(2) + 'T';
+  if (n >= 1e9)  return (n/1e9).toFixed(2) + 'B';
+  if (n >= 1e6)  return (n/1e6).toFixed(2) + 'M';
+  return n.toLocaleString();
+}
+function sparkPath(arr, w=80, h=24) {
+  if (!arr || arr.length < 2) return '';
+  const min = Math.min(...arr), max = Math.max(...arr);
+  const range = max - min || 1;
+  const step = w / (arr.length - 1);
+  return arr.map((v, i) => {
+    const x = i * step;
+    const y = h - ((v - min) / range) * h;
+    return (i === 0 ? 'M' : 'L') + x.toFixed(1) + ',' + y.toFixed(1);
+  }).join(' ');
+}
+
+function render(coins) {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = coins.map(c => {
+    const change = c.price_change_percentage_24h ?? 0;
+    const up = change >= 0;
+    const sparkArr = c.sparkline_in_7d?.price || [];
+    return `
+      <div class="card bg-white p-4 flex flex-col gap-2">
+        <div class="flex items-center gap-2">
+          <img src="${c.image}" alt="" class="w-5 h-5 rounded-full">
+          <div class="text-sm font-medium tracking-tight">${c.symbol.toUpperCase()}</div>
+          <div class="text-xs text-neutral-400 ml-auto">#${c.market_cap_rank}</div>
+        </div>
+        <div class="text-xs text-neutral-500 truncate">${c.name}</div>
+        <div class="mono text-base font-medium mt-1">$${fmtPrice(c.current_price)}</div>
+        <div class="flex items-center justify-between mt-1">
+          <div class="mono text-xs ${up ? 'up' : 'down'}">${up ? '+' : ''}${change.toFixed(2)}%</div>
+          <svg width="80" height="24" viewBox="0 0 80 24" class="${up ? 'text-green-500' : 'text-red-500'}">
+            <path d="${sparkPath(sparkArr)}" class="spark" stroke="currentColor" />
+          </svg>
+        </div>
+        <div class="text-xs text-neutral-400 mono mt-1">MCap ${fmtBig(c.market_cap)}</div>
+      </div>
+    `;
+  }).join('');
+
+  const now = new Date();
+  const stamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+  document.getElementById('lastUpdate').textContent = 'updated ' + stamp;
+  document.getElementById('footerTime').textContent = stamp;
+}
+
+function renderSkel() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = Array.from({length: COINS}, () => `
+    <div class="bg-white p-4 flex flex-col gap-2">
+      <div class="skel h-5 w-20 rounded"></div>
+      <div class="skel h-3 w-16 rounded"></div>
+      <div class="skel h-5 w-24 rounded mt-2"></div>
+      <div class="skel h-3 w-12 rounded"></div>
+    </div>
+  `).join('');
+}
+
+async function tick() {
+  try {
+    const coins = await fetchTop();
+    render(coins);
+  } catch (e) {
+    console.error(e);
+    document.getElementById('lastUpdate').textContent = 'error · retrying';
+  }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', tick);
+renderSkel();
+tick();
+timer = setInterval(tick, 30000);
+</script>
+</body>
+</html>

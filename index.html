@@ -401,6 +401,7 @@ function createTrendWindow(coinId, x, y) {
     endDate: todayISO(0),
     normalized: false,
     x: px, y: py, w, h,
+    measure: { active: false, startT: null, endT: null },
   };
   trendState.windows.push(win);
   if (trendState.applyToAll) {
@@ -634,6 +635,36 @@ function attachWindowHandlers(el, win) {
     drawTrendChart(win, chartCanvas, null);
   });
   chartCanvas.style.cursor = 'crosshair';
+
+  // ---- Measurement (TradingView-style 2-point ruler) ----
+  chartCanvas.addEventListener('click', e => {
+    if (!win.measure) win.measure = { active: false, startT: null, endT: null };
+    if (!win.measure.active) return;
+    const lr = chartCanvas._lastRender;
+    if (!lr) return;
+    const rect = chartCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    if (x < lr.padL || x > lr.padL + lr.plotW) return; // outside plot
+    const t = lr.minT + ((x - lr.padL) / lr.plotW) * (lr.maxT - lr.minT);
+    if (win.measure.startT == null) {
+      win.measure.startT = t;
+    } else if (win.measure.endT == null) {
+      // Set end; swap if user clicked reverse
+      if (t < win.measure.startT) {
+        win.measure.endT = win.measure.startT;
+        win.measure.startT = t;
+      } else {
+        win.measure.endT = t;
+      }
+      win.measure.active = false;
+    } else {
+      // Already measured — restart with new start
+      win.measure.startT = t;
+      win.measure.endT = null;
+    }
+    drawTrendChart(win, chartCanvas);
+    saveTrendLayout();
+  });
 }
 
 function showWindowContextMenu(x, y, win) {
@@ -643,6 +674,9 @@ function showWindowContextMenu(x, y, win) {
   menu.style.left = x + 'px';
   menu.style.top = y + 'px';
   menu.innerHTML = `
+    <div class="ctx-menu-item" data-act="toggle-measure">${win.measure?.active ? 'END' : '📏 START'} MEASURE</div>
+    ${(win.measure?.startT || win.measure?.endT) ? '<div class="ctx-menu-item" data-act="clear-measure">CLEAR MEASUREMENT</div>' : ''}
+    <div class="ctx-menu-sep"></div>
     <div class="ctx-menu-item" data-act="toggle-norm">${win.normalized ? 'DISABLE' : 'ENABLE'} NORMALIZE</div>
     <div class="ctx-menu-item" data-act="clear-coins">CLEAR COINS</div>
     <div class="ctx-menu-sep"></div>
@@ -651,7 +685,25 @@ function showWindowContextMenu(x, y, win) {
   document.body.appendChild(menu);
   menu.addEventListener('click', e => {
     const act = e.target.dataset.act;
-    if (act === 'toggle-norm') {
+    if (act === 'toggle-measure') {
+      if (!win.measure) win.measure = { active: false, startT: null, endT: null };
+      if (win.measure.active) {
+        // End: clear partial
+        win.measure.active = false;
+        win.measure.startT = null;
+        win.measure.endT = null;
+      } else {
+        win.measure.active = true;
+        win.measure.startT = null;
+        win.measure.endT = null;
+      }
+      drawTrendChart(win, document.querySelector(`.trend-window[data-id="${win.id}"] canvas`));
+      saveTrendLayout();
+    } else if (act === 'clear-measure') {
+      win.measure = { active: false, startT: null, endT: null };
+      drawTrendChart(win, document.querySelector(`.trend-window[data-id="${win.id}"] canvas`));
+      saveTrendLayout();
+    } else if (act === 'toggle-norm') {
       win.normalized = !win.normalized;
       const checkbox = document.querySelector(`.trend-window[data-id="${win.id}"] .trend-norm`);
       if (checkbox) checkbox.checked = win.normalized;
@@ -763,6 +815,9 @@ function drawTrendChart(win, canvas, hoverX = null) {
   // Margins
   const padL = 50, padR = 12, padT = 8, padB = 22;
   const plotW = cssW - padL - padR, plotH = cssH - padT - padB;
+
+  // Cache render metadata for click handler
+  canvas._lastRender = { minT, maxT, minV, maxV, padL, padR, padT, padB, plotW, plotH, series, rawSeries };
 
   // Grid
   ctx.strokeStyle = '#1a1a1a';
@@ -891,6 +946,150 @@ function drawTrendChart(win, canvas, hoverX = null) {
       ctx.fillText(`${t.pct >= 0 ? '+' : ''}${t.pct.toFixed(2)}%`, boxX + boxW - 8, ly);
     });
   }
+
+  // ---- MEASUREMENT (TradingView-style 2-point ruler) ----
+  if (win.measure && (win.measure.startT != null || win.measure.active)) {
+    const m = win.measure;
+    if (m.startT != null) {
+      // Clamp to plot range
+      const sT = Math.max(minT, Math.min(maxT, m.startT));
+      const eT = m.endT != null ? Math.max(minT, Math.min(maxT, m.endT)) : null;
+      const sX = padL + ((sT - minT) / (maxT - minT)) * plotW;
+      const eX = eT != null ? padL + ((eT - minT) / (maxT - minT)) * plotW : null;
+      const lineColor = '#fbbf24';
+
+      // Vertical lines
+      ctx.save();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(sX, padT);
+      ctx.lineTo(sX, padT + plotH);
+      ctx.stroke();
+      if (eX != null) {
+        ctx.beginPath();
+        ctx.moveTo(eX, padT);
+        ctx.lineTo(eX, padT + plotH);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // For each coin: shade gain/loss area between the two y-values + label
+      const measurements = [];
+      rawSeries.forEach(rs => {
+        const startDp = closestPoint(rs.data, sT);
+        const endDp = eT != null ? closestPoint(rs.data, eT) : null;
+        if (!startDp) return;
+        const ys = series.find(s => s.coinId === rs.coinId);
+        if (!ys) return;
+        const yStartVal = ys.data[startDp.idx][1];
+        const yEndVal = endDp ? ys.data[endDp.idx][1] : null;
+        const x1 = padL + ((startDp.t - minT) / (maxT - minT)) * plotW;
+        const x2 = eT != null ? padL + ((endDp.t - minT) / (maxT - minT)) * plotW : null;
+        const y1 = padT + (1 - (yStartVal - minV) / (maxV - minV)) * plotH;
+        const y2 = yEndVal != null ? padT + (1 - (yEndVal - minV) / (maxV - minV)) * plotH : null;
+        // Dots
+        ctx.fillStyle = lineColor;
+        ctx.beginPath(); ctx.arc(x1, y1, 4, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+        if (x2 != null && y2 != null) {
+          ctx.fillStyle = lineColor;
+          ctx.beginPath(); ctx.arc(x2, y2, 4, 0, Math.PI * 2); ctx.fill();
+          ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+          // Connecting line
+          ctx.strokeStyle = lineColor;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          // Shaded gain/loss area
+          const pct = ((yEndVal - yStartVal) / yStartVal) * 100;
+          const isUp = pct >= 0;
+          ctx.fillStyle = isUp ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          // Close polygon: go down to baseline (or actual y2 to bottom)
+          const yBase = isUp ? y1 : y2; // top of gain area
+          const yTop = isUp ? y2 : y1;
+          ctx.lineTo(x2, yBase);
+          ctx.lineTo(x1, yBase);
+          ctx.closePath();
+          ctx.fill();
+          measurements.push({
+            sym: findCoin(rs.coinId)?.symbol.toUpperCase() || rs.coinId,
+            color: rs.color,
+            startVal: yStartVal,
+            endVal: yEndVal,
+            pct,
+            delta: yEndVal - yStartVal,
+            x1, y1, x2, y2,
+          });
+        }
+      });
+      ctx.restore();
+
+      // Label box: top-center between the two verticals (or near start if partial)
+      const days = Math.round((sT - (eT != null ? eT : sT)) / 86400000);
+      const dayCount = eT != null ? Math.abs(Math.round((eT - sT) / 86400000)) : null;
+      const dateStart = new Date(sT);
+      const dateEnd = eT != null ? new Date(eT) : null;
+      const fmtDate = d => `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}/${d.getFullYear()}`;
+      const header = eT != null
+        ? `📏 ${dayCount}d · ${fmtDate(dateStart)} → ${fmtDate(dateEnd)}`
+        : `📏 START: ${fmtDate(dateStart)} (click 2nd point)`;
+      const lineH = 15;
+      const headerH = 18;
+      const boxW = 220;
+      const boxH = headerH + lineH * measurements.length + 8;
+      let boxX = sX + 8;
+      if (eX != null) {
+        const midX = (sX + eX) / 2;
+        boxX = Math.max(padL + 4, Math.min(midX - boxW / 2, padL + plotW - boxW - 4));
+      } else {
+        if (boxX + boxW > padL + plotW) boxX = sX - 8 - boxW;
+      }
+      const boxY = padT + 6;
+
+      ctx.fillStyle = 'rgba(10,10,10,0.95)';
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1;
+      ctx.fillRect(boxX, boxY, boxW, boxH);
+      ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1);
+
+      // Header
+      ctx.fillStyle = lineColor;
+      ctx.font = 'bold 10px ui-monospace, monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(header, boxX + 8, boxY + 4);
+
+      // Per-coin lines
+      ctx.font = '10px ui-monospace, monospace';
+      measurements.forEach((m, i) => {
+        const ly = boxY + headerH + 2 + lineH * i;
+        // Color dot
+        ctx.fillStyle = m.color;
+        ctx.beginPath();
+        ctx.arc(boxX + 12, ly + 5, 3, 0, Math.PI * 2);
+        ctx.fill();
+        // Symbol
+        ctx.fillStyle = '#ddd';
+        ctx.textAlign = 'left';
+        ctx.fillText(m.sym, boxX + 20, ly);
+        // Delta value
+        const deltaText = win.normalized
+          ? `${m.delta >= 0 ? '+' : ''}${m.delta.toFixed(2)}`
+          : (m.delta >= 0 ? '+' : '−') + Math.abs(m.delta).toLocaleString('en-US', { maximumFractionDigits: m.delta < 1 ? 6 : 2 });
+        ctx.fillStyle = '#bbb';
+        ctx.textAlign = 'right';
+        ctx.fillText(deltaText, boxX + boxW - 64, ly);
+        // % change
+        ctx.fillStyle = m.pct >= 0 ? '#22c55e' : '#ef4444';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${m.pct >= 0 ? '+' : ''}${m.pct.toFixed(2)}%`, boxX + boxW - 8, ly);
+      });
+    }
+  }
 }
 
 // Find data point with timestamp closest to target t
@@ -922,6 +1121,7 @@ function saveTrendLayout() {
     windows: trendState.windows.map(w => ({
       id: w.id, coinIds: w.coinIds, startDate: w.startDate, endDate: w.endDate,
       normalized: w.normalized, x: w.x, y: w.y, w: w.w, h: w.h,
+      measure: w.measure || { active: false, startT: null, endT: null },
     })),
     applyToAll: trendState.applyToAll,
     nextId: trendState.nextId,
@@ -936,6 +1136,10 @@ function loadTrendLayout() {
     trendState.windows = data.windows || [];
     trendState.applyToAll = !!data.applyToAll;
     trendState.nextId = data.nextId || (Math.max(0, ...trendState.windows.map(w => w.id)) + 1);
+    // Ensure measure defaults
+    trendState.windows.forEach(w => {
+      if (!w.measure) w.measure = { active: false, startT: null, endT: null };
+    });
     document.getElementById('trend-sync-all').checked = trendState.applyToAll;
     renderTrendCanvas();
     trendState.windows.forEach(fetchAndDraw);

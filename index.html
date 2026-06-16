@@ -125,6 +125,79 @@
   .ctx-menu-sep { height: 1px; background: #2a2a2a; margin: 4px 0; }
   .ctx-menu-item.danger { color: #ef4444; }
   .ctx-menu-item.danger:hover { background: #2a1414; }
+
+  /* ---- ETF Flows ---- */
+  .etf-section { margin-top: 3rem; }
+  .etf-section .section-title {
+    font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+    color: #e5e5e5; display: flex; align-items: center; gap: 8px;
+  }
+  .etf-section .section-subtitle { font-size: 12px; color: #666; margin-top: 2px; }
+  .etf-section .section-subtitle a { color: #888; text-decoration: underline; }
+  .etf-tabs { display: flex; gap: 6px; }
+  .etf-tab {
+    background: #111; border: 1px solid #1f1f1f; border-radius: 4px;
+    padding: 6px 12px; font-size: 12px; color: #888;
+    cursor: pointer; font-family: ui-monospace, monospace; font-weight: 600;
+    transition: all .15s ease;
+  }
+  .etf-tab:hover { border-color: #333; color: #ccc; }
+  .etf-tab.active {
+    background: #1a1a1a; border-color: #fbbf24; color: #fbbf24;
+  }
+  .etf-meta {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 16px; font-size: 11px; color: #555;
+    font-family: ui-monospace, monospace;
+  }
+  .etf-meta .label { color: #555; }
+  .etf-meta .value { color: #999; }
+  .etf-summary {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 12px; margin-top: 12px;
+  }
+  .etf-summary-card {
+    background: #0e0e0e; border: 1px solid #1f1f1f; border-radius: 4px;
+    padding: 12px;
+  }
+  .etf-summary-card .lbl {
+    font-size: 10px; color: #666; text-transform: uppercase;
+    font-family: ui-monospace, monospace; letter-spacing: 0.05em;
+  }
+  .etf-summary-card .val {
+    font-size: 18px; font-weight: 600; margin-top: 4px;
+    font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+  }
+  .etf-chart-wrap {
+    margin-top: 16px; background: #0e0e0e; border: 1px solid #1f1f1f;
+    border-radius: 4px; padding: 12px; height: 140px; position: relative;
+  }
+  .etf-chart-wrap canvas { width: 100%; height: 100%; display: block; }
+  .etf-table-wrap {
+    margin-top: 12px; overflow-x: auto; background: #0e0e0e;
+    border: 1px solid #1f1f1f; border-radius: 4px;
+  }
+  .etf-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .etf-table th, .etf-table td {
+    padding: 6px 10px; text-align: right;
+    font-family: ui-monospace, monospace; font-variant-numeric: tabular-nums;
+    border-bottom: 1px solid #161616;
+  }
+  .etf-table th { color: #888; font-weight: 600; font-size: 11px;
+    background: #141414; position: sticky; top: 0; z-index: 1;
+    text-transform: uppercase; letter-spacing: 0.03em; }
+  .etf-table th:first-child, .etf-table td:first-child {
+    text-align: left; color: #aaa;
+  }
+  .etf-table tr:hover td { background: #121212; }
+  .etf-table .col-total { color: #ddd; font-weight: 600; }
+  .etf-table .pos { color: #22c55e; }
+  .etf-table .neg { color: #ef4444; }
+  .etf-table .empty { color: #444; }
+  .etf-loading {
+    color: #666; font-size: 12px; padding: 40px; text-align: center;
+    font-family: ui-monospace, monospace;
+  }
 </style>
 </head>
 <body class="text-neutral-200 min-h-screen">
@@ -175,6 +248,52 @@
           <p class="trends-empty-hint">Window bisa di-drag, di-resize, di-close. Drop coin ke window lain buat combine</p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- ===== ETF Flows ===== -->
+  <section class="etf-section">
+    <div class="flex items-start justify-between" style="flex-wrap: wrap; gap: 12px;">
+      <div>
+        <div class="section-title">📊 ETF FLOWS</div>
+        <p class="section-subtitle">Daily net inflows / outflows (US$ millions). Data: <a href="https://farside.co.uk/" target="_blank" rel="noopener">Farside Investors</a> — di-scrape otomatis tiap hari kerja.</p>
+      </div>
+      <div class="etf-tabs">
+        <button class="etf-tab active" data-asset="btc">🟠 BITCOIN</button>
+        <button class="etf-tab" data-asset="eth">🔵 ETHEREUM</button>
+        <button class="etf-tab" data-asset="hyp">🟣 HYPERLIQUID</button>
+      </div>
+    </div>
+
+    <div class="etf-meta">
+      <div><span class="label">SOURCE </span><span class="value" id="etf-source">—</span></div>
+      <div><span class="label">UPDATED </span><span class="value" id="etf-updated">—</span></div>
+    </div>
+
+    <div class="etf-summary" id="etf-summary">
+      <div class="etf-summary-card">
+        <div class="lbl">Total Flow (period)</div>
+        <div class="val" id="etf-sum-total">—</div>
+      </div>
+      <div class="etf-summary-card">
+        <div class="lbl">Best Day</div>
+        <div class="val" id="etf-sum-best">—</div>
+      </div>
+      <div class="etf-summary-card">
+        <div class="lbl">Worst Day</div>
+        <div class="val" id="etf-sum-worst">—</div>
+      </div>
+    </div>
+
+    <div class="etf-chart-wrap">
+      <canvas id="etf-chart"></canvas>
+    </div>
+
+    <div class="etf-table-wrap" id="etf-table-wrap">
+      <table class="etf-table">
+        <thead id="etf-thead"></thead>
+        <tbody id="etf-tbody"></tbody>
+      </table>
     </div>
   </section>
 </main>
@@ -1236,6 +1355,251 @@ function loadTrendLayout() {
   } catch {}
 }
 
+// ============ ETF FLOWS ============
+// Loads etf-data/{btc,eth,hyp}.json from raw.githubusercontent.com (CORS-friendly).
+// Data is auto-updated daily by .github/workflows/etf-scrape.yml via Playwright.
+const ETF_BASE_URL = 'https://raw.githubusercontent.com/kharisma1453/crypto-dashboard/main/etf-data';
+const ETF_ASSETS = [
+  { id: 'btc', label: 'Bitcoin',   color: '#f7931a' },
+  { id: 'eth', label: 'Ethereum',  color: '#627eea' },
+  { id: 'hyp', label: 'Hyperliquid', color: '#a855f7' },
+];
+const etfState = {
+  current: 'btc',
+  data: {}, // { btc: {...}, eth: {...}, hyp: {...} }
+  loaded: false,
+  loading: false,
+};
+
+async function fetchEtfData() {
+  if (etfState.loading) return;
+  etfState.loading = true;
+  const tbody = document.getElementById('etf-tbody');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="20" class="etf-loading">Loading ETF data…</td></tr>';
+  try {
+    const results = await Promise.all(
+      ETF_ASSETS.map(async a => {
+        const r = await fetch(`${ETF_BASE_URL}/${a.id}.json`, { cache: 'no-cache' });
+        if (!r.ok) throw new Error(`HTTP ${r.status} fetching ${a.id}.json`);
+        return [a.id, await r.json()];
+      })
+    );
+    for (const [id, data] of results) etfState.data[id] = data;
+    etfState.loaded = true;
+  } catch (e) {
+    console.error('fetchEtfData', e);
+    if (tbody) tbody.innerHTML = `<tr><td colspan="20" class="etf-loading">⚠️ Failed to load ETF data: ${e.message}</td></tr>`;
+  } finally {
+    etfState.loading = false;
+  }
+  renderEtfAsset(etfState.current);
+}
+
+function fmtFlow(v) {
+  if (v == null) return '—';
+  const sign = v > 0 ? '+' : (v < 0 ? '−' : '');
+  return `${sign}${Math.abs(v).toFixed(1)}`;
+}
+function fmtFlowClass(v) {
+  if (v == null) return 'empty';
+  if (v > 0) return 'pos';
+  if (v < 0) return 'neg';
+  return '';
+}
+function fmtDateShort(iso) {
+  // '2026-06-15' -> '15 Jun'
+  const d = new Date(iso + 'T00:00:00Z');
+  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', timeZone: 'UTC' });
+}
+
+function renderEtfAsset(assetId) {
+  const data = etfState.data[assetId];
+  if (!data) return;
+  // Update meta
+  document.getElementById('etf-source').textContent = data.source || '—';
+  document.getElementById('etf-updated').textContent = data.scrapedAt
+    ? new Date(data.scrapedAt).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' }) + ' UTC'
+    : '—';
+
+  // Summary cards
+  const rows = data.rows || [];
+  const validRows = rows.filter(r => r.total != null);
+  const totalFlow = validRows.reduce((s, r) => s + r.total, 0);
+  const best = validRows.length ? validRows.reduce((m, r) => r.total > m.total ? r : m, validRows[0]) : null;
+  const worst = validRows.length ? validRows.reduce((m, r) => r.total < m.total ? r : m, validRows[0]) : null;
+  const setVal = (id, text, cls) => {
+    const el = document.getElementById(id);
+    el.textContent = text;
+    el.className = 'val ' + (cls || '');
+  };
+  setVal('etf-sum-total',
+    `${totalFlow >= 0 ? '+' : '−'}${Math.abs(totalFlow).toFixed(1)}M`,
+    fmtFlowClass(totalFlow));
+  setVal('etf-sum-best',
+    best ? `${best.date.slice(5)} · ${fmtFlow(best.total)}` : '—',
+    fmtFlowClass(best?.total));
+  setVal('etf-sum-worst',
+    worst ? `${worst.date.slice(5)} · ${fmtFlow(worst.total)}` : '—',
+    fmtFlowClass(worst?.total));
+
+  // Table header
+  const etfCols = data.etfs || [];
+  const thead = document.getElementById('etf-thead');
+  thead.innerHTML = '<tr>'
+    + '<th>Date</th>'
+    + etfCols.map(c => `<th>${c}</th>`).join('')
+    + '<th class="col-total">Total</th>'
+    + '</tr>';
+
+  // Table body (most recent first)
+  const sorted = [...rows].sort((a, b) => b.date.localeCompare(a.date));
+  const tbody = document.getElementById('etf-tbody');
+  tbody.innerHTML = sorted.map(r => {
+    const cells = etfCols.map(c => {
+      const v = r.values?.[c];
+      return `<td class="${fmtFlowClass(v)}">${fmtFlow(v)}</td>`;
+    }).join('');
+    return `<tr><td>${fmtDateShort(r.date)}</td>${cells}<td class="col-total ${fmtFlowClass(r.total)}">${fmtFlow(r.total)}</td></tr>`;
+  }).join('');
+
+  // Mini chart: cumulative daily net flow line
+  drawEtfChart(assetId, data);
+}
+
+function drawEtfChart(assetId, data) {
+  const canvas = document.getElementById('etf-chart');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  if (cssW === 0 || cssH === 0) return;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  // Cumulative: start at 0, add each daily total in chronological order
+  const rows = (data.rows || []).filter(r => r.total != null).sort((a, b) => a.date.localeCompare(b.date));
+  if (rows.length === 0) {
+    ctx.fillStyle = '#666';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('No data', cssW / 2, cssH / 2);
+    return;
+  }
+  const series = [];
+  let cum = 0;
+  for (const r of rows) { cum += r.total; series.push({ t: new Date(r.date + 'T00:00:00Z').getTime(), v: cum, daily: r.total }); }
+
+  // Bounds
+  const minV = Math.min(0, ...series.map(s => s.v));
+  const maxV = Math.max(0, ...series.map(s => s.v));
+  const minT = series[0].t, maxT = series[series.length - 1].t;
+  const padL = 50, padR = 44, padT = 10, padB = 18;
+  const plotW = cssW - padL - padR, plotH = cssH - padT - padB;
+
+  // Y axis labels (5 ticks)
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillStyle = '#555';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (plotH * i / 4);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
+    const v = maxV - (maxV - minV) * (i / 4);
+    const sign = v > 0 ? '+' : (v < 0 ? '−' : '');
+    ctx.fillText(`${sign}${Math.abs(v).toFixed(0)}M`, padL - 6, y);
+  }
+
+  // X axis labels (start, mid, end)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (const frac of [0, 0.5, 1]) {
+    const x = padL + plotW * frac;
+    const t = minT + (maxT - minT) * frac;
+    const d = new Date(t);
+    const lbl = `${String(d.getUTCDate()).padStart(2,'0')}/${String(d.getUTCMonth()+1).padStart(2,'0')}`;
+    ctx.fillText(lbl, x, cssH - padB + 4);
+  }
+
+  // Zero line
+  const zeroY = padT + (1 - (0 - minV) / (maxV - minV)) * plotH;
+  ctx.strokeStyle = '#2a2a2a';
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(cssW - padR, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Cumulative line — green if ending > 0, red if ending < 0, gray if ~0
+  const asset = ETF_ASSETS.find(a => a.id === assetId);
+  const baseColor = asset?.color || '#fbbf24';
+  const endingPos = series[series.length - 1].v >= 0;
+
+  // Filled area under the line
+  ctx.beginPath();
+  series.forEach((p, i) => {
+    const x = padL + ((p.t - minT) / Math.max(1, maxT - minT)) * plotW;
+    const y = padT + (1 - (p.v - minV) / Math.max(0.0001, maxV - minV)) * plotH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  const lastX = padL + plotW;
+  ctx.lineTo(lastX, zeroY);
+  ctx.lineTo(padL, zeroY);
+  ctx.closePath();
+  ctx.fillStyle = endingPos ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+  ctx.fill();
+
+  // Cumulative line itself
+  ctx.beginPath();
+  series.forEach((p, i) => {
+    const x = padL + ((p.t - minT) / Math.max(1, maxT - minT)) * plotW;
+    const y = padT + (1 - (p.v - minV) / Math.max(0.0001, maxV - minV)) * plotH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.strokeStyle = endingPos ? '#22c55e' : '#ef4444';
+  ctx.lineWidth = 1.8;
+  ctx.stroke();
+
+  // Per-day vertical bars (light, behind) showing daily flow
+  const barW = Math.max(2, plotW / series.length * 0.5);
+  series.forEach(p => {
+    const x = padL + ((p.t - minT) / Math.max(1, maxT - minT)) * plotW;
+    const yDaily = padT + (1 - (p.daily - minV) / Math.max(0.0001, maxV - minV)) * plotH;
+    ctx.fillStyle = p.daily >= 0 ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)';
+    ctx.fillRect(x - barW / 2, yDaily, barW, zeroY - yDaily);
+  });
+
+  // Last point dot + label
+  const lastP = series[series.length - 1];
+  const lx = padL + plotW;
+  const ly = padT + (1 - (lastP.v - minV) / Math.max(0.0001, maxV - minV)) * plotH;
+  ctx.fillStyle = endingPos ? '#22c55e' : '#ef4444';
+  ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+  // Label
+  const labelText = `${endingPos ? '+' : '−'}${Math.abs(lastP.v).toFixed(0)}M`;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillStyle = endingPos ? '#22c55e' : '#ef4444';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(labelText, lx - 6, ly - 10);
+}
+
+function setupEtfTabs() {
+  document.querySelectorAll('.etf-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.asset;
+      if (id === etfState.current) return;
+      etfState.current = id;
+      document.querySelectorAll('.etf-tab').forEach(b => b.classList.toggle('active', b.dataset.asset === id));
+      renderEtfAsset(id);
+    });
+  });
+}
+
 // ============ INIT ============
 document.getElementById('trend-reset-btn').addEventListener('click', () => {
   if (trendState.windows.length === 0) return;
@@ -1244,6 +1608,18 @@ document.getElementById('trend-reset-btn').addEventListener('click', () => {
 document.getElementById('trend-sync-all').addEventListener('change', e => {
   trendState.applyToAll = e.target.checked;
   saveTrendLayout();
+});
+
+// ETF section
+setupEtfTabs();
+fetchEtfData();
+// Redraw ETF chart on resize (debounced via rAF)
+let _etfResizeRaf = null;
+window.addEventListener('resize', () => {
+  if (_etfResizeRaf) cancelAnimationFrame(_etfResizeRaf);
+  _etfResizeRaf = requestAnimationFrame(() => {
+    if (etfState.loaded) drawEtfChart(etfState.current, etfState.data[etfState.current]);
+  });
 });
 
 setupTrendCanvas();

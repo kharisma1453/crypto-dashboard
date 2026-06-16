@@ -1,0 +1,244 @@
+{
+  "asset": "eth",
+  "title": "Ethereum ETF Flow (US$m) \u2013 Farside Investors",
+  "source": "https://farside.co.uk/eth/",
+  "scrapedAt": "2026-06-16T15:30:47Z",
+  "etfs": [
+    "ETHA",
+    "ETHB",
+    "FETH",
+    "ETHW",
+    "TETH",
+    "ETHV",
+    "QETH",
+    "EZET",
+    "ETHE",
+    "ETH"
+  ],
+  "rows": [
+    {
+      "date": "2026-05-28",
+      "values": {
+        "ETHA": -80.4,
+        "ETHB": 3.1,
+        "FETH": -15.1,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": -21.4,
+        "ETH": -7.6
+      },
+      "total": -121.4
+    },
+    {
+      "date": "2026-05-29",
+      "values": {
+        "ETHA": -40.7,
+        "ETHB": 9.3,
+        "FETH": 10.5,
+        "ETHW": 1.4,
+        "TETH": 1.5,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": 0.0
+      },
+      "total": -18.0
+    },
+    {
+      "date": "2026-06-01",
+      "values": {
+        "ETHA": -35.0,
+        "ETHB": 0.0,
+        "FETH": -9.5,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": 0.0
+      },
+      "total": -44.5
+    },
+    {
+      "date": "2026-06-02",
+      "values": {
+        "ETHA": -44.3,
+        "ETHB": -1.0,
+        "FETH": -15.6,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": -3.9,
+        "ETH": -25.4
+      },
+      "total": -90.2
+    },
+    {
+      "date": "2026-06-03",
+      "values": {
+        "ETHA": -51.6,
+        "ETHB": 0.0,
+        "FETH": -1.4,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": 0.0
+      },
+      "total": -53.0
+    },
+    {
+      "date": "2026-06-04",
+      "values": {
+        "ETHA": 19.3,
+        "ETHB": 0.0,
+        "FETH": 0.0,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": 0.0
+      },
+      "total": 19.3
+    },
+    {
+      "date": "2026-06-05",
+      "values": {
+        "ETHA": -13.2,
+        "ETHB": 4.0,
+        "FETH": null,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": null,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 3.2,
+        "ETH": 0.0
+      },
+      "total": -6.0
+    },
+    {
+      "date": "2026-06-08",
+      "values": {
+        "ETHA": 17.8,
+        "ETHB": 26.9,
+        "FETH": 28.6,
+        "ETHW": 3.0,
+        "TETH": 1.3,
+        "ETHV": -3.7,
+        "QETH": 0.5,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": 8.0
+      },
+      "total": 82.4
+    },
+    {
+      "date": "2026-06-09",
+      "values": {
+        "ETHA": -8.5,
+        "ETHB": 0.0,
+        "FETH": 0.0,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": -17.4,
+        "ETH": -15.0
+      },
+      "total": -40.9
+    },
+    {
+      "date": "2026-06-10",
+      "values": {
+        "ETHA": -20.6,
+        "ETHB": 1.7,
+        "FETH": -16.6,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": 0.0
+      },
+      "total": -35.5
+    },
+    {
+      "date": "2026-06-11",
+      "values": {
+        "ETHA": 8.6,
+        "ETHB": 0.0,
+        "FETH": -20.5,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": -4.0
+      },
+      "total": -15.9
+    },
+    {
+      "date": "2026-06-12",
+      "values": {
+        "ETHA": -4.5,
+        "ETHB": 0.0,
+        "FETH": -0.4,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 0.0,
+        "ETH": 0.0
+      },
+      "total": -4.9
+    },
+    {
+      "date": "2026-06-15",
+      "values": {
+        "ETHA": 17.6,
+        "ETHB": 0.0,
+        "FETH": 0.0,
+        "ETHW": 0.0,
+        "TETH": 0.0,
+        "ETHV": 0.0,
+        "QETH": 0.0,
+        "EZET": 0.0,
+        "ETHE": 1.8,
+        "ETH": 3.1
+      },
+      "total": 22.5
+    },
+    {
+      "date": "2026-06-16",
+      "values": {
+        "ETHA": null,
+        "ETHB": null,
+        "FETH": null,
+        "ETHW": null,
+        "TETH": null,
+        "ETHV": null,
+        "QETH": null,
+        "EZET": null,
+        "ETHE": null,
+        "ETH": null
+      },
+      "total": 0.0
+    }
+  ]
+}

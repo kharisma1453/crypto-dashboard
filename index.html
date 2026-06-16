@@ -20,6 +20,111 @@
   .card { background: #111; border: 1px solid #1f1f1f; transition: border-color .15s ease, background .15s ease; }
   .card:hover { border-color: #333; background: #131313; }
   .divider { border-color: #1f1f1f; }
+
+  /* ---- Trend Builder ---- */
+  .trends-section { margin-top: 3rem; }
+  .trends-section .section-title {
+    font-size: 14px; font-weight: 600; letter-spacing: 0.02em;
+    color: #e5e5e5; display: flex; align-items: center; gap: 8px;
+  }
+  .trends-section .section-subtitle { font-size: 12px; color: #666; margin-top: 2px; }
+  .trends-actions { display: flex; align-items: center; gap: 12px; }
+  .trend-btn {
+    font-size: 11px; font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    padding: 4px 10px; border: 1px solid #2a2a2a; background: #141414; color: #ccc;
+    cursor: pointer; border-radius: 3px;
+  }
+  .trend-btn:hover { background: #1a1a1a; color: #fff; }
+  .trend-sync-toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #888; cursor: pointer; font-family: ui-monospace, monospace; }
+  .trend-sync-toggle input { accent-color: #22c55e; cursor: pointer; }
+
+  .trends-layout {
+    display: grid; grid-template-columns: 200px 1fr; gap: 12px;
+    margin-top: 14px; min-height: 480px;
+  }
+  @media (max-width: 768px) { .trends-layout { grid-template-columns: 1fr; } }
+
+  .trends-library {
+    background: #0e0e0e; border: 1px solid #1f1f1f; border-radius: 4px; padding: 12px;
+    max-height: 600px; overflow-y: auto;
+  }
+  .trends-library h3 { font-size: 11px; color: #888; font-family: ui-monospace, monospace; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .trends-library-hint { font-size: 10px; color: #555; margin-bottom: 10px; font-family: ui-monospace, monospace; }
+  .trends-catalog { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+  .trend-source {
+    display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+    border: 1px solid #1f1f1f; border-radius: 3px; cursor: grab;
+    font-size: 12px; user-select: none; transition: background .1s, border-color .1s;
+  }
+  .trend-source:hover { background: #1a1a1a; border-color: #333; }
+  .trend-source:active { cursor: grabbing; }
+  .trend-source.dragging { opacity: 0.4; }
+  .trend-source-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--coin-color, #888); flex-shrink: 0; }
+  .trend-source-label { font-weight: 500; color: #ddd; font-family: ui-monospace, monospace; }
+  .trend-source-rank { margin-left: auto; font-size: 10px; color: #555; }
+
+  .trends-canvas {
+    background: #0e0e0e; border: 1px solid #1f1f1f; border-radius: 4px; padding: 12px;
+    min-height: 480px; position: relative;
+    background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .trends-canvas.drag-over { border-color: #22c55e; background-color: #0d140d; }
+  .trends-canvas-empty {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; color: #444; min-height: 450px; padding: 40px;
+  }
+  .trends-empty-icon { font-size: 32px; opacity: 0.4; }
+  .trends-empty-hint { font-size: 11px; color: #444; margin-top: 6px; font-family: ui-monospace, monospace; }
+
+  .trend-window {
+    background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 4px;
+    position: absolute; min-width: 360px; min-height: 240px;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .trend-window.drag-over-win { border-color: #22c55e; }
+  .trend-window-header {
+    display: flex; align-items: center; gap: 6px; padding: 6px 10px;
+    background: #111; border-bottom: 1px solid #1f1f1f; cursor: move; user-select: none;
+  }
+  .trend-window-handle { color: #444; font-size: 10px; letter-spacing: 1px; }
+  .trend-window-title { font-size: 12px; font-weight: 600; color: #ddd; font-family: ui-monospace, monospace; }
+  .trend-window-close {
+    margin-left: auto; background: none; border: none; color: #666; cursor: pointer;
+    font-size: 14px; padding: 0 4px; line-height: 1;
+  }
+  .trend-window-close:hover { color: #ef4444; }
+  .trend-window-body { flex: 1; padding: 8px 10px; min-height: 0; }
+  .trend-window-chart { width: 100%; height: 100%; display: block; }
+  .trend-window-footer {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    background: #0c0c0c; border-top: 1px solid #1a1f1f; font-size: 11px;
+    font-family: ui-monospace, monospace; color: #888;
+  }
+  .trend-window-footer input[type="date"] {
+    background: #141414; border: 1px solid #252525; color: #ccc;
+    padding: 3px 6px; border-radius: 3px; font-family: inherit; font-size: 11px;
+    color-scheme: dark;
+  }
+  .trend-window-footer input[type="date"]:focus { outline: none; border-color: #444; }
+  .trend-window-footer input.invalid { border-color: #ef4444; }
+  .trend-window-footer label.norm-toggle { display: flex; align-items: center; gap: 4px; cursor: pointer; }
+  .trend-window-footer label.norm-toggle input { accent-color: #22c55e; cursor: pointer; }
+  .trend-window-legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 10px; color: #888; padding: 4px 10px 6px; background: #0c0c0c; }
+  .trend-legend-item { display: flex; align-items: center; gap: 4px; }
+  .trend-legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Context menu */
+  .ctx-menu {
+    position: fixed; background: #141414; border: 1px solid #2a2a2a; border-radius: 4px;
+    padding: 4px 0; min-width: 160px; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    font-size: 12px; z-index: 1000; font-family: ui-monospace, monospace;
+  }
+  .ctx-menu-item { padding: 6px 12px; cursor: pointer; color: #ccc; }
+  .ctx-menu-item:hover { background: #1f1f1f; color: #fff; }
+  .ctx-menu-sep { height: 1px; background: #2a2a2a; margin: 4px 0; }
+  .ctx-menu-item.danger { color: #ef4444; }
+  .ctx-menu-item.danger:hover { background: #2a1414; }
 </style>
 </head>
 <body class="text-neutral-200 min-h-screen">
@@ -41,6 +146,37 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3" id="grid">
     <!-- 15 cards injected here -->
   </div>
+
+  <!-- ===== Trend Builder ===== -->
+  <section class="trends-section">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="section-title">🧪 TREND BUILDER</div>
+        <p class="section-subtitle">Drag coin dari library ke canvas buat bikin window. Drop coin ke window lain buat combine. Layout kesimpan otomatis.</p>
+      </div>
+      <div class="trends-actions">
+        <button class="trend-btn" id="trend-reset-btn">🗑️ RESET</button>
+        <label class="trend-sync-toggle" title="Kalau ON, perubahan date range + normalize di satu window akan ke-apply ke semua window">
+          <input type="checkbox" id="trend-sync-all"> APPLY TO ALL
+        </label>
+      </div>
+    </div>
+
+    <div class="trends-layout">
+      <aside class="trends-library">
+        <h3>LIBRARY</h3>
+        <p class="trends-library-hint">Drag ke canvas →</p>
+        <ul class="trends-catalog" id="trends-catalog"></ul>
+      </aside>
+      <div class="trends-canvas" id="trends-canvas">
+        <div class="trends-canvas-empty" id="trends-canvas-empty">
+          <span class="trends-empty-icon">📊</span>
+          <p>Drop coin card dari library buat mulai</p>
+          <p class="trends-empty-hint">Window bisa di-drag, di-resize, di-close. Drop coin ke window lain buat combine</p>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="max-w-7xl mx-auto px-6 py-4 text-xs text-neutral-600 flex items-center justify-between">
@@ -49,8 +185,10 @@
 </footer>
 
 <script>
+// ============ TOP 15 GRID ============
 const COINS = 15;
 let timer = null;
+let topCoins = []; // top 15 coin data (cached for trend builder)
 
 async function fetchTop() {
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=${COINS}&page=1&sparkline=true&price_change_percentage=24h`;
@@ -84,6 +222,7 @@ function sparkPath(arr, w=100, h=28) {
 }
 
 function render(coins) {
+  topCoins = coins;
   const grid = document.getElementById('grid');
   grid.innerHTML = coins.map(c => {
     const change = c.price_change_percentage_24h ?? 0;
@@ -99,7 +238,7 @@ function render(coins) {
         <div class="num text-lg font-semibold text-neutral-50">$${fmtPrice(c.current_price)}</div>
         <div class="flex items-center justify-between">
           <div class="num text-xs ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${up ? '+' : ''}${change.toFixed(2)}%</div>
-          <svg width="100" height="28" viewBox="0 0 100 28" class="${up ? '' : ''}">
+          <svg width="100" height="28" viewBox="0 0 100 28">
             <path d="${sparkPath(sparkArr)}" class="spark" stroke="${up ? '#22c55e' : '#ef4444'}" />
           </svg>
         </div>
@@ -114,6 +253,9 @@ function render(coins) {
       </div>
     `;
   }).join('');
+
+  // Also rebuild trend library
+  renderTrendLibrary();
 
   const now = new Date();
   const stamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -146,6 +288,560 @@ document.getElementById('refreshBtn').addEventListener('click', tick);
 renderSkel();
 tick();
 timer = setInterval(tick, 30000);
+
+// ============ TREND BUILDER ============
+
+// Assign a stable color to each coin (deterministic from coin id)
+function coinColor(coinId) {
+  let hash = 0;
+  for (let i = 0; i < coinId.length; i++) hash = coinId.charCodeAt(i) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 70%, 60%)`;
+}
+
+const trendState = {
+  windows: [], // { id, coinIds: [coinId], startDate, endDate, normalized, x, y, w, h }
+  applyToAll: false,
+  prices: {}, // cache: prices[coinId] = { days: { '30': { prices: [[ts, p], ...] } } }
+  nextId: 1,
+};
+
+const STORAGE_KEY = 'crypto-dashboard-trends-v1';
+
+function todayISO(offsetDays = 0) {
+  const d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+
+function renderTrendLibrary() {
+  const catalog = document.getElementById('trends-catalog');
+  if (!catalog) return;
+  if (!topCoins || topCoins.length === 0) {
+    catalog.innerHTML = '<li style="font-size:11px;color:#555;font-family:ui-monospace,monospace;padding:8px;">Loading…</li>';
+    return;
+  }
+  catalog.innerHTML = topCoins.map(c => {
+    const color = coinColor(c.id);
+    return `<li class="trend-source" draggable="true" data-coin-id="${c.id}" style="--coin-color: ${color}">
+      <span class="trend-source-dot"></span>
+      <span class="trend-source-label">${c.symbol.toUpperCase()}</span>
+      <span class="trend-source-rank">#${c.market_cap_rank}</span>
+    </li>`;
+  }).join('');
+  catalog.querySelectorAll('.trend-source').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', el.dataset.coinId);
+      e.dataTransfer.effectAllowed = 'copy';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+  });
+}
+
+function setupTrendCanvas() {
+  const canvas = document.getElementById('trends-canvas');
+  canvas.addEventListener('dragover', e => { e.preventDefault(); canvas.classList.add('drag-over'); });
+  canvas.addEventListener('dragleave', e => { if (e.target === canvas) canvas.classList.remove('drag-over'); });
+  canvas.addEventListener('drop', e => {
+    e.preventDefault();
+    canvas.classList.remove('drag-over');
+    const coinId = e.dataTransfer.getData('text/plain');
+    if (!coinId) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const target = getTrendWindowAtPoint(x, y);
+    if (target) {
+      addCoinToWindow(target, coinId);
+    } else {
+      createTrendWindow(coinId, x, y);
+    }
+  });
+  // Right-click on canvas (not on window) → no menu (clean)
+  canvas.addEventListener('contextmenu', e => {
+    // Only show menu if right-click is on a window
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left, y = e.clientY - rect.top;
+    const win = getTrendWindowAtPoint(x, y);
+    if (win) { e.preventDefault(); showWindowContextMenu(e.clientX, e.clientY, win); }
+  });
+  // Close any open ctx menu on click elsewhere
+  document.addEventListener('click', () => closeContextMenu());
+  document.addEventListener('contextmenu', e => {
+    // outside canvas, no menu
+    if (!e.target.closest('.trends-canvas')) closeContextMenu();
+  });
+}
+
+function getTrendWindowAtPoint(x, y) {
+  for (let i = trendState.windows.length - 1; i >= 0; i--) {
+    const w = trendState.windows[i];
+    if (x >= w.x && x <= w.x + w.w && y >= w.y && y <= w.y + w.h) return w;
+  }
+  return null;
+}
+
+function findCoin(coinId) {
+  return topCoins.find(c => c.id === coinId);
+}
+
+function createTrendWindow(coinId, x, y) {
+  // Place window at drop point, but offset if too close to edge
+  const w = 480, h = 280;
+  const canvas = document.getElementById('trends-canvas');
+  const cr = canvas.getBoundingClientRect();
+  const px = Math.max(8, Math.min(x - 60, cr.width - w - 8));
+  const py = Math.max(8, Math.min(y - 30, cr.height - h - 8));
+
+  const win = {
+    id: trendState.nextId++,
+    coinIds: [coinId],
+    startDate: todayISO(-30),
+    endDate: todayISO(0),
+    normalized: false,
+    x: px, y: py, w, h,
+  };
+  trendState.windows.push(win);
+  if (trendState.applyToAll) {
+    // apply to all is a one-way sync; new windows inherit current date range
+  }
+  renderTrendCanvas();
+  saveTrendLayout();
+  fetchAndDraw(win);
+}
+
+function addCoinToWindow(win, coinId) {
+  if (win.coinIds.includes(coinId)) return; // already there
+  win.coinIds.push(coinId);
+  renderTrendCanvas();
+  saveTrendLayout();
+  fetchAndDraw(win);
+}
+
+function removeCoinFromWindow(win, coinId) {
+  win.coinIds = win.coinIds.filter(id => id !== coinId);
+  if (win.coinIds.length === 0) {
+    closeTrendWindow(win);
+    return;
+  }
+  renderTrendCanvas();
+  saveTrendLayout();
+  fetchAndDraw(win);
+}
+
+function closeTrendWindow(win) {
+  trendState.windows = trendState.windows.filter(w => w.id !== win.id);
+  renderTrendCanvas();
+  saveTrendLayout();
+}
+
+function resetTrends() {
+  trendState.windows = [];
+  renderTrendCanvas();
+  saveTrendLayout();
+}
+
+function renderTrendCanvas() {
+  const canvas = document.getElementById('trends-canvas');
+  const empty = document.getElementById('trends-canvas-empty');
+  // Remove old windows
+  canvas.querySelectorAll('.trend-window').forEach(el => el.remove());
+  if (trendState.windows.length === 0) {
+    empty.style.display = 'flex';
+    return;
+  }
+  empty.style.display = 'none';
+  trendState.windows.forEach(win => {
+    const el = document.createElement('div');
+    el.className = 'trend-window';
+    el.dataset.id = win.id;
+    el.style.left = win.x + 'px';
+    el.style.top = win.y + 'px';
+    el.style.width = win.w + 'px';
+    el.style.height = win.h + 'px';
+    el.innerHTML = windowHTML(win);
+    canvas.appendChild(el);
+    attachWindowHandlers(el, win);
+    // Redraw chart inside the canvas
+    drawTrendChart(win, el.querySelector('canvas'));
+  });
+}
+
+function windowHTML(win) {
+  const coins = win.coinIds.map(id => {
+    const c = findCoin(id);
+    return c ? { id, sym: c.symbol.toUpperCase(), name: c.name, color: coinColor(id) } : { id, sym: id, name: id, color: '#888' };
+  });
+  const title = coins.map(c => c.sym).join(' + ');
+  const legendHTML = coins.map(c => `
+    <span class="trend-legend-item" data-coin-id="${c.id}" title="Right-click to remove">
+      <span class="trend-legend-dot" style="background:${c.color}"></span>
+      ${c.sym}
+    </span>
+  `).join('');
+  return `
+    <div class="trend-window-header">
+      <span class="trend-window-handle">⠿</span>
+      <span class="trend-window-title">${title}</span>
+      <button class="trend-window-close" data-action="close" title="Close">×</button>
+    </div>
+    <div class="trend-window-body">
+      <canvas class="trend-window-chart"></canvas>
+    </div>
+    <div class="trend-window-legend">${legendHTML}</div>
+    <div class="trend-window-footer">
+      <label style="color:#666;">FROM</label>
+      <input type="date" class="trend-start" value="${win.startDate}" max="${win.endDate}">
+      <label style="color:#666;">TO</label>
+      <input type="date" class="trend-end" value="${win.endDate}" min="${win.startDate}">
+      <label class="norm-toggle" style="margin-left:auto;">
+        <input type="checkbox" class="trend-norm" ${win.normalized ? 'checked' : ''}> NORMALIZE
+      </label>
+    </div>
+  `;
+}
+
+function attachWindowHandlers(el, win) {
+  // Drag
+  const header = el.querySelector('.trend-window-header');
+  let drag = null;
+  header.addEventListener('mousedown', e => {
+    if (e.target.dataset.action === 'close') return;
+    if (e.button !== 0) return;
+    const canvas = document.getElementById('trends-canvas');
+    const cr = canvas.getBoundingClientRect();
+    drag = { dx: e.clientX - cr.left - win.x, dy: e.clientY - cr.top - win.y };
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!drag) return;
+    const canvas = document.getElementById('trends-canvas');
+    const cr = canvas.getBoundingClientRect();
+    win.x = Math.max(0, Math.min(e.clientX - cr.left - drag.dx, cr.width - win.w));
+    win.y = Math.max(0, Math.min(e.clientY - cr.top - drag.dy, cr.height - 40));
+    el.style.left = win.x + 'px';
+    el.style.top = win.y + 'px';
+  });
+  document.addEventListener('mouseup', () => { if (drag) { drag = null; saveTrendLayout(); } });
+
+  // Resize (bottom-right corner)
+  let resize = null;
+  el.addEventListener('mousedown', e => {
+    if (!(e.offsetX > el.clientWidth - 14 && e.offsetY > el.clientHeight - 14)) return;
+    resize = { startX: e.clientX, startY: e.clientY, startW: win.w, startH: win.h };
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', e => {
+    if (!resize) return;
+    win.w = Math.max(360, resize.startW + (e.clientX - resize.startX));
+    win.h = Math.max(220, resize.startH + (e.clientY - resize.startY));
+    el.style.width = win.w + 'px';
+    el.style.height = win.h + 'px';
+    drawTrendChart(win, el.querySelector('canvas'));
+  });
+  document.addEventListener('mouseup', () => { if (resize) { resize = null; saveTrendLayout(); } });
+
+  // Close
+  el.querySelector('[data-action="close"]').addEventListener('click', e => {
+    e.stopPropagation();
+    closeTrendWindow(win);
+  });
+
+  // Date inputs
+  const startIn = el.querySelector('.trend-start');
+  const endIn = el.querySelector('.trend-end');
+  function dateChange() {
+    if (startIn.value && endIn.value && startIn.value > endIn.value) {
+      startIn.classList.add('invalid'); endIn.classList.add('invalid'); return;
+    }
+    startIn.classList.remove('invalid'); endIn.classList.remove('invalid');
+    win.startDate = startIn.value;
+    win.endDate = endIn.value;
+    startIn.max = win.endDate;
+    endIn.min = win.startDate;
+    if (trendState.applyToAll) {
+      trendState.windows.forEach(w => {
+        if (w === win) return;
+        w.startDate = win.startDate;
+        w.endDate = win.endDate;
+      });
+      // Re-render only the date inputs of other windows
+      trendState.windows.forEach(w => {
+        if (w === win) return;
+        const e2 = document.querySelector(`.trend-window[data-id="${w.id}"]`);
+        if (!e2) return;
+        e2.querySelector('.trend-start').value = w.startDate;
+        e2.querySelector('.trend-end').value = w.endDate;
+        fetchAndDraw(w);
+      });
+    }
+    fetchAndDraw(win);
+    saveTrendLayout();
+  }
+  startIn.addEventListener('change', dateChange);
+  endIn.addEventListener('change', dateChange);
+
+  // Normalize toggle
+  el.querySelector('.trend-norm').addEventListener('change', e => {
+    win.normalized = e.target.checked;
+    if (trendState.applyToAll) {
+      trendState.windows.forEach(w => {
+        if (w === win) return;
+        w.normalized = win.normalized;
+        const e2 = document.querySelector(`.trend-window[data-id="${w.id}"]`);
+        if (e2) e2.querySelector('.trend-norm').checked = w.normalized;
+        fetchAndDraw(w);
+      });
+    }
+    fetchAndDraw(win);
+    saveTrendLayout();
+  });
+
+  // Drop on window → combine
+  el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over-win'); });
+  el.addEventListener('dragleave', e => { if (e.target === el) el.classList.remove('drag-over-win'); });
+  el.addEventListener('drop', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    el.classList.remove('drag-over-win');
+    const coinId = e.dataTransfer.getData('text/plain');
+    if (coinId) addCoinToWindow(win, coinId);
+  });
+
+  // Right-click on legend item → remove coin
+  el.querySelectorAll('.trend-legend-item').forEach(item => {
+    item.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      removeCoinFromWindow(win, item.dataset.coinId);
+    });
+  });
+}
+
+function showWindowContextMenu(x, y, win) {
+  closeContextMenu();
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+  menu.style.left = x + 'px';
+  menu.style.top = y + 'px';
+  menu.innerHTML = `
+    <div class="ctx-menu-item" data-act="toggle-norm">${win.normalized ? 'DISABLE' : 'ENABLE'} NORMALIZE</div>
+    <div class="ctx-menu-item" data-act="clear-coins">CLEAR COINS</div>
+    <div class="ctx-menu-sep"></div>
+    <div class="ctx-menu-item danger" data-act="close">CLOSE WINDOW</div>
+  `;
+  document.body.appendChild(menu);
+  menu.addEventListener('click', e => {
+    const act = e.target.dataset.act;
+    if (act === 'toggle-norm') {
+      win.normalized = !win.normalized;
+      const checkbox = document.querySelector(`.trend-window[data-id="${win.id}"] .trend-norm`);
+      if (checkbox) checkbox.checked = win.normalized;
+      fetchAndDraw(win);
+      saveTrendLayout();
+    } else if (act === 'clear-coins') {
+      win.coinIds = [];
+      renderTrendCanvas();
+      saveTrendLayout();
+    } else if (act === 'close') {
+      closeTrendWindow(win);
+    }
+    closeContextMenu();
+  });
+}
+function closeContextMenu() {
+  document.querySelectorAll('.ctx-menu').forEach(el => el.remove());
+}
+
+// ============ CHART DRAWING ============
+
+async function fetchAndDraw(win) {
+  if (win.coinIds.length === 0) return;
+  const days = daysBetween(win.startDate, win.endDate);
+  // Fetch all coins in parallel
+  await Promise.all(win.coinIds.map(coinId => fetchCoinHistory(coinId, days)));
+  // After all loaded, redraw
+  const el = document.querySelector(`.trend-window[data-id="${win.id}"]`);
+  if (el) drawTrendChart(win, el.querySelector('canvas'));
+}
+
+async function fetchCoinHistory(coinId, days) {
+  if (!trendState.prices[coinId]) trendState.prices[coinId] = {};
+  if (trendState.prices[coinId][days]) return trendState.prices[coinId][days];
+  // Map days to CoinGecko param
+  const cgDays = days > 365 ? 'max' : String(days);
+  const url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${cgDays}`;
+  try {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error('rate limited: ' + r.status);
+    const data = await r.json();
+    // Filter to [startDate, endDate]
+    const startMs = new Date(win_startOfDay(coinId, days)).getTime();
+    const endMs = Date.now();
+    const filtered = data.prices.filter(p => p[0] >= startMs);
+    trendState.prices[coinId][days] = filtered;
+    return filtered;
+  } catch (e) {
+    console.error('fetchCoinHistory', coinId, e);
+    return [];
+  }
+}
+function win_startOfDay(coinId, days) {
+  // Use the start date of the first window referencing this coin. Approximate: now - days
+  const d = new Date();
+  d.setDate(d.getDate() - days);
+  return d.toISOString().slice(0, 10);
+}
+
+function daysBetween(start, end) {
+  const a = new Date(start), b = new Date(end);
+  return Math.max(1, Math.round((b - a) / 86400000));
+}
+
+function drawTrendChart(win, canvas) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const cssW = canvas.clientWidth, cssH = canvas.clientHeight;
+  canvas.width = cssW * dpr;
+  canvas.height = cssH * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, cssW, cssH);
+
+  const days = daysBetween(win.startDate, win.endDate);
+  // Gather series
+  const series = win.coinIds.map(coinId => {
+    const data = (trendState.prices[coinId] && trendState.prices[coinId][days]) || [];
+    return { coinId, data, color: coinColor(coinId) };
+  }).filter(s => s.data.length > 1);
+
+  if (series.length === 0) {
+    ctx.fillStyle = '#444';
+    ctx.font = '11px ui-monospace, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('Loading…', cssW / 2, cssH / 2);
+    return;
+  }
+
+  // Normalize if needed
+  if (win.normalized) {
+    series.forEach(s => {
+      const base = s.data[0][1];
+      s.data = s.data.map(p => [p[0], (p[1] / base) * 100]);
+    });
+  }
+
+  // Determine range
+  let minV = Infinity, maxV = -Infinity, minT = Infinity, maxT = -Infinity;
+  series.forEach(s => s.data.forEach(p => {
+    minV = Math.min(minV, p[1]); maxV = Math.max(maxV, p[1]);
+    minT = Math.min(minT, p[0]); maxT = Math.max(maxT, p[0]);
+  }));
+  if (minV === maxV) { minV -= 1; maxV += 1; }
+  if (minT === maxT) { minT -= 1; maxT += 1; }
+
+  // Margins
+  const padL = 50, padR = 12, padT = 8, padB = 22;
+  const plotW = cssW - padL - padR, plotH = cssH - padT - padB;
+
+  // Grid
+  ctx.strokeStyle = '#1a1a1a';
+  ctx.lineWidth = 1;
+  ctx.font = '10px ui-monospace, monospace';
+  ctx.fillStyle = '#555';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (plotH * i / 4);
+    ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
+    const v = maxV - (maxV - minV) * (i / 4);
+    ctx.fillText(formatChartValue(v, win.normalized), padL - 6, y);
+  }
+  // X-axis labels (date)
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  for (let i = 0; i <= 4; i++) {
+    const x = padL + (plotW * i / 4);
+    const t = minT + (maxT - minT) * (i / 4);
+    const d = new Date(t);
+    const lbl = `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    ctx.fillText(lbl, x, cssH - padB + 4);
+  }
+
+  // Plot each series
+  series.forEach(s => {
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    s.data.forEach((p, i) => {
+      const x = padL + ((p[0] - minT) / (maxT - minT)) * plotW;
+      const y = padT + (1 - (p[1] - minV) / (maxV - minV)) * plotH;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+}
+
+function formatChartValue(v, normalized) {
+  if (normalized) return v.toFixed(0);
+  if (Math.abs(v) >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  if (Math.abs(v) >= 1) return v.toFixed(2);
+  if (Math.abs(v) >= 0.01) return v.toFixed(4);
+  return v.toPrecision(3);
+}
+
+// ============ PERSISTENCE ============
+function saveTrendLayout() {
+  const data = {
+    windows: trendState.windows.map(w => ({
+      id: w.id, coinIds: w.coinIds, startDate: w.startDate, endDate: w.endDate,
+      normalized: w.normalized, x: w.x, y: w.y, w: w.w, h: w.h,
+    })),
+    applyToAll: trendState.applyToAll,
+    nextId: trendState.nextId,
+  };
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
+}
+function loadTrendLayout() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const data = JSON.parse(raw);
+    trendState.windows = data.windows || [];
+    trendState.applyToAll = !!data.applyToAll;
+    trendState.nextId = data.nextId || (Math.max(0, ...trendState.windows.map(w => w.id)) + 1);
+    document.getElementById('trend-sync-all').checked = trendState.applyToAll;
+    renderTrendCanvas();
+    trendState.windows.forEach(fetchAndDraw);
+  } catch {}
+}
+
+// ============ INIT ============
+document.getElementById('trend-reset-btn').addEventListener('click', () => {
+  if (trendState.windows.length === 0) return;
+  if (confirm('Reset semua trend windows?')) resetTrends();
+});
+document.getElementById('trend-sync-all').addEventListener('change', e => {
+  trendState.applyToAll = e.target.checked;
+  saveTrendLayout();
+});
+
+setupTrendCanvas();
+loadTrendLayout();
+// If no saved layout, pre-populate one window with BTC
+if (trendState.windows.length === 0 && topCoins.length > 0) {
+  // wait for topCoins to load first
+  const waitForCoins = setInterval(() => {
+    if (topCoins.length > 0) {
+      clearInterval(waitForCoins);
+      const btc = topCoins.find(c => c.id === 'bitcoin') || topCoins[0];
+      if (btc) createTrendWindow(btc.id, 60, 30);
+    }
+  }, 500);
+}
 </script>
 </body>
 </html>

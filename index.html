@@ -1136,11 +1136,14 @@ function drawTrendChart(win, canvas, hoverX = null) {
     });
   }
 
-  // Determine range
-  let minV = Infinity, maxV = -Infinity, minT = Infinity, maxT = -Infinity;
+  // X-axis range tracks the user-selected date range, not the data range,
+  // so the chart always shows the dates the user picked (even if data is
+  // missing at the edges, e.g. after a fetch failed). Y-axis still adapts
+  // to whatever data we actually have.
+  let minV = Infinity, maxV = -Infinity;
+  let minT = sMs, maxT = eMs;
   series.forEach(s => s.data.forEach(p => {
     minV = Math.min(minV, p[1]); maxV = Math.max(maxV, p[1]);
-    minT = Math.min(minT, p[0]); maxT = Math.max(maxT, p[0]);
   }));
   if (minV === maxV) { minV -= 1; maxV += 1; }
   if (minT === maxT) { minT -= 1; maxT += 1; }

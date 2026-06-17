@@ -240,7 +240,28 @@
   .etf-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
   .etf-trends-section { margin-top: 3rem; }
   .etf-pagination .page-info { color: #666; }
+
+  /* === THEME TOGGLE (light via body invert; re-invert elements that should stay dark) === */
+  [data-theme="light"] { filter: invert(1) hue-rotate(180deg); }
+  [data-theme="light"] .trend-window,
+  [data-theme="light"] .etf-chart-wrap,
+  [data-theme="light"] img { filter: invert(1) hue-rotate(180deg); }
+  .theme-toggle-btn {
+    background: none; border: 1px solid transparent; cursor: pointer;
+    padding: 4px 8px; font-size: 16px; line-height: 1; color: #999;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s, border-color 0.15s;
+  }
+  .theme-toggle-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
 </style>
+<script>
+  // FOUC prevention: apply theme before body renders
+  try {
+    if ((localStorage.getItem('theme-preference') || 'dark') === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    }
+  } catch (e) {}
+</script>
 </head>
 <body class="text-neutral-200 min-h-screen">
 <header class="border-b divider">
@@ -253,6 +274,7 @@
     <div class="flex items-center gap-3">
       <div class="text-xs text-neutral-500 num">30s</div>
       <button id="refreshBtn" class="text-xs text-neutral-400 hover:text-neutral-100 num">REFRESH</button>
+      <button id="themeToggleBtn" class="theme-toggle-btn" type="button" title="Switch to light theme" aria-label="Toggle theme">☾</button>
     </div>
   </div>
 </header>
@@ -1639,6 +1661,23 @@ function setupLibraryToggle(canvasId, storageKey) {
 }
 setupLibraryToggle('trends-canvas', 'trends-library-collapsed-coin');
 setupLibraryToggle('etf-trends-canvas', 'trends-library-collapsed-etf');
+
+// ---- Theme toggle (default dark, persist to localStorage) ----
+(function () {
+  const btn = document.getElementById('themeToggleBtn');
+  if (!btn) return;
+  const apply = (t) => {
+    if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
+    else document.documentElement.removeAttribute('data-theme');
+    btn.textContent = t === 'light' ? '☀' : '☾';
+    btn.title = t === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
+    try { localStorage.setItem('theme-preference', t); } catch (e) {}
+  };
+  let stored = 'dark';
+  try { stored = localStorage.getItem('theme-preference') || 'dark'; } catch (e) {}
+  apply(stored);
+  btn.addEventListener('click', () => apply(document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light'));
+})();
 // ============ ETF FLOWS ============
 // Loads etf-data/{btc,eth,hyp}.json — from raw.githubusercontent.com in production,
 // or relative path when running locally (e.g., python3 -m http.server).

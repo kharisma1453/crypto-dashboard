@@ -219,6 +219,7 @@
     background: #1a1a1a; color: #22c55e; border-color: #22c55e;
   }
   .etf-pagination button:disabled { opacity: 0.3; cursor: not-allowed; }
+  .etf-trends-section { margin-top: 3rem; }
   .etf-pagination .page-info { color: #666; }
 </style>
 </head>
@@ -329,6 +330,37 @@
     </div>
     <div class="etf-pagination" id="etf-pagination"></div>
   </section>
+
+  <!-- ===== ETF Trend Builder ===== -->
+  <section class="etf-trends-section">
+    <div class="flex items-start justify-between">
+      <div>
+        <div class="section-title">🧪 ETF TREND BUILDER</div>
+        <p class="section-subtitle">Drag asset dari library buat compare daily net flow ($M). Window bisa campur BTC + ETH + HYPE + ALL. Layout kesimpan otomatis.</p>
+      </div>
+      <div class="trends-actions">
+        <button class="trend-btn" id="etf-trend-reset-btn">🗑️ RESET</button>
+        <label class="trend-sync-toggle" title="Kalau ON, perubahan date range + normalize di satu window akan ke-apply ke semua window">
+          <input type="checkbox" id="etf-trend-sync-all"> APPLY TO ALL
+        </label>
+      </div>
+    </div>
+
+    <div class="trends-layout">
+      <aside class="trends-library">
+        <h3>LIBRARY</h3>
+        <p class="trends-library-hint">Drag ke canvas →</p>
+        <ul class="trends-catalog" id="etf-trends-catalog"></ul>
+      </aside>
+      <div class="trends-canvas" id="etf-trends-canvas">
+        <div class="trends-canvas-empty" id="etf-trends-canvas-empty">
+          <span class="trends-empty-icon">📊</span>
+          <p>Drop asset dari library buat mulai</p>
+          <p class="trends-empty-hint">Window bisa di-drag, di-resize, di-close. Drop asset ke window lain buat combine</p>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <footer class="max-w-7xl mx-auto px-6 py-4 text-xs text-neutral-600 flex items-center justify-between">
@@ -407,7 +439,7 @@ function render(coins) {
   }).join('');
 
   // Also rebuild trend library
-  renderTrendLibrary();
+  coinRenderLibrary();
 
   const now = new Date();
   const stamp = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
@@ -441,25 +473,49 @@ renderSkel();
 tick();
 timer = setInterval(tick, 30000);
 
+// ============ TREND BUILDER (FACTORY) ============
+// One factory, two instances: coin trend builder + ETF trend builder.
+// ============ GENERIC HELPERS (used by both trend builders) ============
+function closestPoint(data, t) {
+  if (!data || data.length === 0) return null;
+  let lo = 0, hi = data.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (data[mid][0] < t) lo = mid + 1; else hi = mid;
+  }
+  if (lo > 0 && Math.abs(data[lo - 1][0] - t) < Math.abs(data[lo][0] - t)) lo = lo - 1;
+  return { idx: lo, t: data[lo][0], v: data[lo][1] };
+}
+function formatChartValue(v, normalized) {
+  if (normalized) return v.toFixed(0);
+  if (Math.abs(v) >= 1e9) return (v / 1e9).toFixed(1) + 'B';
+  if (Math.abs(v) >= 1e6) return (v / 1e6).toFixed(1) + 'M';
+  if (Math.abs(v) >= 1e3) return (v / 1e3).toFixed(1) + 'K';
+  if (Math.abs(v) >= 1) return v.toFixed(2);
+  if (Math.abs(v) >= 0.01) return v.toFixed(4);
+  return v.toPrecision(3);
+}
+function todayISO(offsetDays = 0) {
+  const d = new Date();
+  if (offsetDays) d.setDate(d.getDate() + offsetDays);
+  return d.toISOString().slice(0, 10);
+}
+function dateStartMs(s) { return new Date(s + 'T00:00:00Z').getTime(); }
+function dateEndMs(s)   { return new Date(s + 'T23:59:59Z').getTime(); }
+function isEndCurrent(s) { return s >= new Date().toISOString().slice(0, 10); }
+
 // ============ TREND BUILDER ============
 
-// Assign a stable color to each coin (deterministic from coin id)
-function coinColor(coinId) {
-  let hash = 0;
-  for (let i = 0; i < coinId.length; i++) hash = coinId.charCodeAt(i) + ((hash << 5) - hash);
-  const hue = Math.abs(hash) % 360;
-  return `hsl(${hue}, 70%, 60%)`;
-}
 
-const trendState = {
-  windows: [], // { id, coinIds: [coinId], startDate, endDate, normalized, x, y, w, h, loading }
-  applyToAll: false,
-  prices: {}, // cache: prices[coinId] = { startMs, endMs, points: [[ts, p], ...] } (broadest range fetched)
-  nextId: 1,
-  _inflight: {}, // dedup in-flight requests per coin
-};
+function createTrendBuilder(cfg) {
+  const state = {
+    windows: [], // { id, sourceIds, startDate, endDate, normalized, x, y, w, h, loading, measure }
+    applyToAll: false,
+    series: {}, // cache: series[sourceId] = { startMs, endMs, points: [[ts, v], ...] }
+    nextId: 1,
+    _inflight: {}, // dedup in-flight requests per source
+  };
 
-const STORAGE_KEY = 'crypto-dashboard-trends-v1';
 
 function todayISO(offsetDays = 0) {
   const d = new Date();
@@ -467,33 +523,13 @@ function todayISO(offsetDays = 0) {
   return d.toISOString().slice(0, 10);
 }
 
-function renderTrendLibrary() {
-  const catalog = document.getElementById('trends-catalog');
-  if (!catalog) return;
-  if (!topCoins || topCoins.length === 0) {
-    catalog.innerHTML = '<li style="font-size:11px;color:#555;font-family:ui-monospace,monospace;padding:8px;">Loading…</li>';
-    return;
+
+function renderLibrary() {
+    cfg.renderLibrary();
   }
-  catalog.innerHTML = topCoins.map(c => {
-    const color = coinColor(c.id);
-    return `<li class="trend-source" draggable="true" data-coin-id="${c.id}" style="--coin-color: ${color}">
-      <span class="trend-source-dot"></span>
-      <span class="trend-source-label">${c.symbol.toUpperCase()}</span>
-      <span class="trend-source-rank">#${c.market_cap_rank}</span>
-    </li>`;
-  }).join('');
-  catalog.querySelectorAll('.trend-source').forEach(el => {
-    el.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', el.dataset.coinId);
-      e.dataTransfer.effectAllowed = 'copy';
-      el.classList.add('dragging');
-    });
-    el.addEventListener('dragend', () => el.classList.remove('dragging'));
-  });
-}
 
 function setupTrendCanvas() {
-  const canvas = document.getElementById('trends-canvas');
+  const canvas = document.getElementById(cfg.canvasId);
   canvas.addEventListener('dragover', e => { e.preventDefault(); canvas.classList.add('drag-over'); });
   canvas.addEventListener('dragleave', e => { if (e.target === canvas) canvas.classList.remove('drag-over'); });
   canvas.addEventListener('drop', e => {
@@ -528,28 +564,25 @@ function setupTrendCanvas() {
 }
 
 function getTrendWindowAtPoint(x, y) {
-  for (let i = trendState.windows.length - 1; i >= 0; i--) {
-    const w = trendState.windows[i];
+  for (let i = state.windows.length - 1; i >= 0; i--) {
+    const w = state.windows[i];
     if (x >= w.x && x <= w.x + w.w && y >= w.y && y <= w.y + w.h) return w;
   }
   return null;
 }
 
-function findCoin(coinId) {
-  return topCoins.find(c => c.id === coinId);
-}
 
 function createTrendWindow(coinId, x, y) {
   // Place window at drop point, but offset if too close to edge
   const w = 480, h = 280;
-  const canvas = document.getElementById('trends-canvas');
+  const canvas = document.getElementById(cfg.canvasId);
   const cr = canvas.getBoundingClientRect();
   const px = Math.max(8, Math.min(x - 60, cr.width - w - 8));
   const py = Math.max(8, Math.min(y - 30, cr.height - h - 8));
 
   const win = {
-    id: trendState.nextId++,
-    coinIds: [coinId],
+    id: state.nextId++,
+    sourceIds: [coinId],
     startDate: todayISO(-30),
     endDate: todayISO(0),
     normalized: false,
@@ -557,8 +590,8 @@ function createTrendWindow(coinId, x, y) {
     measure: { active: false, startT: null, endT: null },
     loading: false,
   };
-  trendState.windows.push(win);
-  if (trendState.applyToAll) {
+  state.windows.push(win);
+  if (state.applyToAll) {
     // apply to all is a one-way sync; new windows inherit current date range
   }
   renderTrendCanvas();
@@ -567,16 +600,16 @@ function createTrendWindow(coinId, x, y) {
 }
 
 function addCoinToWindow(win, coinId) {
-  if (win.coinIds.includes(coinId)) return; // already there
-  win.coinIds.push(coinId);
+  if (win.sourceIds.includes(coinId)) return; // already there
+  win.sourceIds.push(coinId);
   renderTrendCanvas();
   saveTrendLayout();
   fetchAndDraw(win);
 }
 
 function removeCoinFromWindow(win, coinId) {
-  win.coinIds = win.coinIds.filter(id => id !== coinId);
-  if (win.coinIds.length === 0) {
+  win.sourceIds = win.sourceIds.filter(id => id !== coinId);
+  if (win.sourceIds.length === 0) {
     closeTrendWindow(win);
     return;
   }
@@ -586,28 +619,30 @@ function removeCoinFromWindow(win, coinId) {
 }
 
 function closeTrendWindow(win) {
-  trendState.windows = trendState.windows.filter(w => w.id !== win.id);
+  state.windows = state.windows.filter(w => w.id !== win.id);
   renderTrendCanvas();
   saveTrendLayout();
 }
 
 function resetTrends() {
-  trendState.windows = [];
+  state.windows = [];
   renderTrendCanvas();
   saveTrendLayout();
 }
 
 function renderTrendCanvas() {
-  const canvas = document.getElementById('trends-canvas');
-  const empty = document.getElementById('trends-canvas-empty');
+  const canvas = document.getElementById(cfg.canvasId);
+  const empty = document.getElementById(cfg.emptyId);
   // Remove old windows
   canvas.querySelectorAll('.trend-window').forEach(el => el.remove());
-  if (trendState.windows.length === 0) {
+  // Clear stale element references
+  state.windows.forEach(w => { w._el = null; });
+  if (state.windows.length === 0) {
     empty.style.display = 'flex';
     return;
   }
   empty.style.display = 'none';
-  trendState.windows.forEach(win => {
+  state.windows.forEach(win => {
     const el = document.createElement('div');
     el.className = 'trend-window';
     el.dataset.id = win.id;
@@ -617,6 +652,7 @@ function renderTrendCanvas() {
     el.style.height = win.h + 'px';
     el.innerHTML = windowHTML(win);
     canvas.appendChild(el);
+    win._el = el; // direct reference, avoids querySelector collision between coin/etf instances
     attachWindowHandlers(el, win);
     // Redraw chart inside the canvas
     drawTrendChart(win, el.querySelector('canvas'));
@@ -624,9 +660,9 @@ function renderTrendCanvas() {
 }
 
 function windowHTML(win) {
-  const coins = win.coinIds.map(id => {
-    const c = findCoin(id);
-    return c ? { id, sym: c.symbol.toUpperCase(), name: c.name, color: coinColor(id) } : { id, sym: id, name: id, color: '#888' };
+  const coins = win.sourceIds.map(id => {
+    const meta = cfg.getSourceMeta(id);
+    return { id, sym: meta.label, name: meta.sublabel || meta.label, color: meta.color };
   });
   const title = coins.map(c => c.sym).join(' + ');
   const legendHTML = coins.map(c => `
@@ -664,14 +700,14 @@ function attachWindowHandlers(el, win) {
   header.addEventListener('mousedown', e => {
     if (e.target.dataset.action === 'close') return;
     if (e.button !== 0) return;
-    const canvas = document.getElementById('trends-canvas');
+    const canvas = document.getElementById(cfg.canvasId);
     const cr = canvas.getBoundingClientRect();
     drag = { dx: e.clientX - cr.left - win.x, dy: e.clientY - cr.top - win.y };
     e.preventDefault();
   });
   document.addEventListener('mousemove', e => {
     if (!drag) return;
-    const canvas = document.getElementById('trends-canvas');
+    const canvas = document.getElementById(cfg.canvasId);
     const cr = canvas.getBoundingClientRect();
     win.x = Math.max(0, Math.min(e.clientX - cr.left - drag.dx, cr.width - win.w));
     win.y = Math.max(0, Math.min(e.clientY - cr.top - drag.dy, cr.height - 40));
@@ -716,19 +752,18 @@ function attachWindowHandlers(el, win) {
     win.endDate = endIn.value;
     startIn.max = win.endDate;
     endIn.min = win.startDate;
-    if (trendState.applyToAll) {
-      trendState.windows.forEach(w => {
+    if (state.applyToAll) {
+      state.windows.forEach(w => {
         if (w === win) return;
         w.startDate = win.startDate;
         w.endDate = win.endDate;
       });
       // Re-render only the date inputs of other windows
-      trendState.windows.forEach(w => {
+      state.windows.forEach(w => {
         if (w === win) return;
-        const e2 = document.querySelector(`.trend-window[data-id="${w.id}"]`);
-        if (!e2) return;
-        e2.querySelector('.trend-start').value = w.startDate;
-        e2.querySelector('.trend-end').value = w.endDate;
+        if (!w._el) return;
+        w._el.querySelector('.trend-start').value = w.startDate;
+        w._el.querySelector('.trend-end').value = w.endDate;
         debouncedFetch(w);
       });
     }
@@ -741,12 +776,11 @@ function attachWindowHandlers(el, win) {
   // Normalize toggle
   el.querySelector('.trend-norm').addEventListener('change', e => {
     win.normalized = e.target.checked;
-    if (trendState.applyToAll) {
-      trendState.windows.forEach(w => {
+    if (state.applyToAll) {
+      state.windows.forEach(w => {
         if (w === win) return;
         w.normalized = win.normalized;
-        const e2 = document.querySelector(`.trend-window[data-id="${w.id}"]`);
-        if (e2) e2.querySelector('.trend-norm').checked = w.normalized;
+        if (w._el) w._el.querySelector('.trend-norm').checked = w.normalized;
         fetchAndDraw(w);
       });
     }
@@ -852,20 +886,22 @@ function showWindowContextMenu(x, y, win) {
         win.measure.startT = null;
         win.measure.endT = null;
       }
-      drawTrendChart(win, document.querySelector(`.trend-window[data-id="${win.id}"] canvas`));
+      drawTrendChart(win, win._el ? win._el.querySelector('canvas') : null);
       saveTrendLayout();
     } else if (act === 'clear-measure') {
       win.measure = { active: false, startT: null, endT: null };
-      drawTrendChart(win, document.querySelector(`.trend-window[data-id="${win.id}"] canvas`));
+      drawTrendChart(win, win._el ? win._el.querySelector('canvas') : null);
       saveTrendLayout();
     } else if (act === 'toggle-norm') {
       win.normalized = !win.normalized;
-      const checkbox = document.querySelector(`.trend-window[data-id="${win.id}"] .trend-norm`);
-      if (checkbox) checkbox.checked = win.normalized;
+      if (win._el) {
+        const checkbox = win._el.querySelector('.trend-norm');
+        if (checkbox) checkbox.checked = win.normalized;
+      }
       fetchAndDraw(win);
       saveTrendLayout();
     } else if (act === 'clear-coins') {
-      win.coinIds = [];
+      win.sourceIds = [];
       renderTrendCanvas();
       saveTrendLayout();
     } else if (act === 'close') {
@@ -906,87 +942,60 @@ async function pMapLimit(items, limit, fn) {
   return results;
 }
 
-async function fetchCoinHistory(coinId, startDate, endDate) {
-  const startMs = dateStartMs(startDate);
-  const endMs   = dateEndMs(endDate);
 
-  // 1) Cache hit: fully covered → slice client-side, no fetch
-  const cached = trendState.prices[coinId];
-  if (cached && cached.startMs <= startMs && cached.endMs >= endMs) {
-    return cached.points.filter(p => p[0] >= startMs && p[0] <= endMs);
-  }
-
-  // 2) In-flight dedup: another window is already fetching this coin
-  if (trendState._inflight[coinId]) {
-    try { await trendState._inflight[coinId]; } catch {}
-    const c2 = trendState.prices[coinId];
-    if (c2 && c2.startMs <= startMs && c2.endMs >= endMs) {
-      return c2.points.filter(p => p[0] >= startMs && p[0] <= endMs);
+async function fetchCoinHistory(sourceId, startDate, endDate) {
+    const startMs = dateStartMs(startDate);
+    const endMs   = dateEndMs(endDate);
+    // 1) Cache hit: fully covered AND has points → return slice
+    const cached = state.series[sourceId];
+    if (cached && cached.points.length > 0 && cached.startMs <= startMs && cached.endMs >= endMs) {
+      return cached.points.filter(p => p[0] >= startMs && p[0] <= endMs);
     }
-  }
-
-  // 3) Pick endpoint based on whether range touches "now"
-  //    - current: /market_chart?days=N  (5-min / hourly / daily granularity)
-  //    - historical: /market_chart/range  (exact [from, to] range)
-  let url;
-  if (isEndCurrent(endDate)) {
-    const days = Math.max(1, Math.ceil((Date.now() - startMs) / 86400000));
-    const cgDays = days > 365 ? 'max' : String(days);
-    url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${cgDays}`;
-  } else {
-    url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart/range?vs_currency=usd&from=${Math.floor(startMs / 1000)}&to=${Math.floor(endMs / 1000)}`;
-  }
-
-  const promise = (async () => {
-    const r = await fetch(url);
-    if (!r.ok) throw new Error('rate limited: ' + r.status);
-    const data = await r.json();
-    const newPoints = data.prices || [];
-
-    // Merge into cache (union of all fetched ranges)
-    const c1 = trendState.prices[coinId];
-    if (c1) {
-      const map = new Map();
-      c1.points.forEach(p => map.set(p[0], p));
-      newPoints.forEach(p => map.set(p[0], p));
-      const merged = [...map.values()].sort((a, b) => a[0] - b[0]);
-      trendState.prices[coinId] = {
-        startMs: Math.min(c1.startMs, startMs),
-        endMs:   Math.max(c1.endMs, endMs),
-        points: merged,
-      };
-    } else {
-      trendState.prices[coinId] = { startMs, endMs, points: newPoints };
+    // 2) In-flight: wait for it
+    if (state._inflight[sourceId]) {
+      try { await state._inflight[sourceId]; } catch {}
+      const c2 = state.series[sourceId];
+      if (c2 && c2.points.length > 0 && c2.startMs <= startMs && c2.endMs >= endMs) {
+        return c2.points.filter(p => p[0] >= startMs && p[0] <= endMs);
+      }
     }
-  })();
-
-  trendState._inflight[coinId] = promise;
-  try {
-    await promise;
-  } catch (e) {
-    console.error('fetchCoinHistory', coinId, e);
-  } finally {
-    delete trendState._inflight[coinId];
+    // 3) Fetch via cfg.fetchSeries
+    const promise = (async () => {
+      const newPoints = await cfg.fetchSeries(sourceId, startDate, endDate);
+      const c1 = state.series[sourceId];
+      if (c1 && c1.points.length > 0) {
+        const map = new Map();
+        c1.points.forEach(p => map.set(p[0], p));
+        newPoints.forEach(p => map.set(p[0], p));
+        const merged = [...map.values()].sort((a, b) => a[0] - b[0]);
+        state.series[sourceId] = {
+          startMs: Math.min(c1.startMs, startMs),
+          endMs:   Math.max(c1.endMs, endMs),
+          points: merged,
+        };
+      } else {
+        state.series[sourceId] = { startMs, endMs, points: newPoints };
+      }
+    })();
+    state._inflight[sourceId] = promise;
+    try { await promise; } catch (e) { console.error('fetchCoinHistory', sourceId, e); }
+    finally { delete state._inflight[sourceId]; }
+    const c2 = state.series[sourceId];
+    if (!c2) return [];
+    return c2.points.filter(p => p[0] >= startMs && p[0] <= endMs);
   }
-
-  const c2 = trendState.prices[coinId];
-  if (!c2) return [];
-  return c2.points.filter(p => p[0] >= startMs && p[0] <= endMs);
-}
 
 async function fetchAndDraw(win) {
-  if (win.coinIds.length === 0) return;
-  if (win.loading) return; // already fetching
+  if (win.sourceIds.length === 0) { return; }
+  if (win.loading) { return; }
   win.loading = true;
   // Redraw now to show "Loading…" overlay (keeps stale data underneath)
-  const el = document.querySelector(`.trend-window[data-id="${win.id}"]`);
-  if (el) drawTrendChart(win, el.querySelector('canvas'));
+  if (win._el) drawTrendChart(win, win._el.querySelector('canvas'));
   try {
-    await pMapLimit(win.coinIds, 3, (coinId) => fetchCoinHistory(coinId, win.startDate, win.endDate));
+    await pMapLimit(win.sourceIds, 3, (coinId) => fetchCoinHistory(coinId, win.startDate, win.endDate));
   } finally {
     win.loading = false;
-    const el2 = document.querySelector(`.trend-window[data-id="${win.id}"]`);
-    if (el2) drawTrendChart(win, el2.querySelector('canvas'));
+    if (win._el) drawTrendChart(win, win._el.querySelector('canvas'));
   }
 }
 
@@ -1003,10 +1012,10 @@ function drawTrendChart(win, canvas, hoverX = null) {
   const sMs = dateStartMs(win.startDate);
   const eMs = dateEndMs(win.endDate);
   // Gather series (keep raw for ruler) — filter cache by [startDate, endDate]
-  const rawSeries = win.coinIds.map(coinId => {
-    const cache = trendState.prices[coinId];
+  const rawSeries = win.sourceIds.map(sourceId => {
+    const cache = state.series[sourceId];
     const data = cache ? cache.points.filter(p => p[0] >= sMs && p[0] <= eMs) : [];
-    return { coinId, data, color: coinColor(coinId) };
+    return { sourceId, data, color: (cfg.getSourceMeta(sourceId) || {color: '#888'}).color };
   }).filter(s => s.data.length > 1);
 
   if (rawSeries.length === 0) {
@@ -1018,7 +1027,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
   }
 
   // Make a working copy for normalization (preserve rawSeries[].data for ruler % calc)
-  const series = rawSeries.map(s => ({ coinId: s.coinId, color: s.color, data: s.data.map(p => [...p]) }));
+  const series = rawSeries.map(s => ({ sourceId: s.sourceId, color: s.color, data: s.data.map(p => [...p]) }));
   // Normalize if needed
   if (win.normalized) {
     series.forEach(s => {
@@ -1054,7 +1063,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
     const y = padT + (plotH * i / 4);
     ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
     const v = maxV - (maxV - minV) * (i / 4);
-    ctx.fillText(formatChartValue(v, win.normalized), padL - 6, y);
+    ctx.fillText(cfg.yFormat(v, win.normalized), padL - 6, y);
   }
   // X-axis labels (date)
   ctx.textAlign = 'center';
@@ -1099,7 +1108,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
     rawSeries.forEach(rs => {
       const dp = closestPoint(rs.data, tAtX);
       if (!dp) return;
-      const ys = series.find(s => s.coinId === rs.coinId);
+      const ys = series.find(s => s.sourceId === rs.sourceId);
       const yv = ys.data[dp.idx][1];
       const x = padL + ((dp.t - minT) / (maxT - minT)) * plotW;
       const y = padT + (1 - (yv - minV) / (maxV - minV)) * plotH;
@@ -1115,8 +1124,8 @@ function drawTrendChart(win, canvas, hoverX = null) {
       const startVal = rs.data[0][1];
       const pctChange = ((dp.v - startVal) / startVal) * 100;
       tooltip.push({
-        coinId: rs.coinId,
-        sym: findCoin(rs.coinId)?.symbol.toUpperCase() || rs.coinId,
+        sourceId: rs.sourceId,
+        sym: (cfg.getSourceMeta(rs.coinId) || {label: rs}).label.coinId,
         color: rs.color,
         value: dp.v,
         pct: pctChange,
@@ -1164,7 +1173,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
       // Price (right-aligned)
       ctx.fillStyle = '#ccc';
       ctx.textAlign = 'right';
-      ctx.fillText(win.normalized ? t.value.toFixed(1) : fmtPrice(t.value), boxX + boxW - 56, ly);
+      ctx.fillText(win.normalized ? t.value.toFixed(1) : cfg.formatValue(t.value), boxX + boxW - 56, ly);
       // % change (right-aligned, color-coded)
       ctx.fillStyle = t.pct >= 0 ? '#22c55e' : '#ef4444';
       ctx.fillText(`${t.pct >= 0 ? '+' : ''}${t.pct.toFixed(2)}%`, boxX + boxW - 8, ly);
@@ -1205,7 +1214,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
         const startDp = closestPoint(rs.data, sT);
         const endDp = eT != null ? closestPoint(rs.data, eT) : null;
         if (!startDp) return;
-        const ys = series.find(s => s.coinId === rs.coinId);
+        const ys = series.find(s => s.sourceId === rs.sourceId);
         if (!ys) return;
         const yStartVal = ys.data[startDp.idx][1];
         const yEndVal = endDp ? ys.data[endDp.idx][1] : null;
@@ -1240,7 +1249,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
           ctx.closePath();
           ctx.fill();
           measurements.push({
-            sym: findCoin(rs.coinId)?.symbol.toUpperCase() || rs.coinId,
+            sym: (cfg.getSourceMeta(rs.coinId) || {label: rs}).label.coinId,
             color: rs.color,
             startVal: yStartVal,
             endVal: yEndVal,
@@ -1303,7 +1312,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
         // Delta value
         const deltaText = win.normalized
           ? `${m.delta >= 0 ? '+' : ''}${m.delta.toFixed(2)}`
-          : (m.delta >= 0 ? '+' : '−') + Math.abs(m.delta).toLocaleString('en-US', { maximumFractionDigits: m.delta < 1 ? 6 : 2 });
+          : cfg.formatValue(m.delta);
         ctx.fillStyle = '#bbb';
         ctx.textAlign = 'right';
         ctx.fillText(deltaText, boxX + boxW - 64, ly);
@@ -1359,13 +1368,13 @@ function formatChartValue(v, normalized) {
 // ============ PERSISTENCE ============
 function saveTrendLayout() {
   const data = {
-    windows: trendState.windows.map(w => ({
-      id: w.id, coinIds: w.coinIds, startDate: w.startDate, endDate: w.endDate,
+    windows: state.windows.map(w => ({
+      id: w.id, sourceIds: w.sourceIds || w.coinIds || [w.coinId].filter(Boolean), startDate: w.startDate, endDate: w.endDate,
       normalized: w.normalized, x: w.x, y: w.y, w: w.w, h: w.h,
       measure: w.measure || { active: false, startT: null, endT: null },
     })),
-    applyToAll: trendState.applyToAll,
-    nextId: trendState.nextId,
+    applyToAll: state.applyToAll,
+    nextId: state.nextId,
   };
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch {}
 }
@@ -1374,20 +1383,218 @@ function loadTrendLayout() {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return;
     const data = JSON.parse(raw);
-    trendState.windows = data.windows || [];
-    trendState.applyToAll = !!data.applyToAll;
-    trendState.nextId = data.nextId || (Math.max(0, ...trendState.windows.map(w => w.id)) + 1);
+    state.windows = data.windows || [];
+    state.applyToAll = !!data.applyToAll;
+    state.nextId = data.nextId || (Math.max(0, ...state.windows.map(w => w.id)) + 1);
     // Ensure measure + loading defaults
-    trendState.windows.forEach(w => {
+    state.windows.forEach(w => {
       if (!w.measure) w.measure = { active: false, startT: null, endT: null };
       if (w.loading === undefined) w.loading = false;
     });
-    document.getElementById('trend-sync-all').checked = trendState.applyToAll;
+    document.getElementById('trend-sync-all').checked = state.applyToAll;
     renderTrendCanvas();
-    trendState.windows.forEach(fetchAndDraw);
+    state.windows.forEach(fetchAndDraw);
   } catch {}
 }
 
+
+
+  // === Init (per-instance) ===
+  document.getElementById(cfg.resetBtnId).addEventListener('click', () => {
+    if (state.windows.length === 0) return;
+    if (cfg.confirmReset()) {
+      state.reset();
+    }
+  });
+  document.getElementById(cfg.syncToggleId).addEventListener('change', e => {
+    state.applyToAll = e.target.checked;
+    saveTrendLayout();
+  });
+
+  const elCanvas = document.getElementById(cfg.canvasId);
+  const elEmpty = document.getElementById(cfg.emptyId);
+  setupTrendCanvas();
+  loadTrendLayout();
+
+  // If no windows after load, populate default — defer to ensure all globals (e.g. etfState) are ready
+  if (state.windows.length === 0 && cfg.defaultSourceId) {
+    if (cfg.getSourceMeta(cfg.defaultSourceId)) {
+      const win = { id: state.nextId++, sourceIds: [cfg.defaultSourceId], startDate: todayISO(-30), endDate: todayISO(0), normalized: false, x: cfg.defaultWindowX, y: cfg.defaultWindowY, w: 480, h: 280, measure: { active: false, startT: null, endT: null }, loading: false };
+      state.windows.push(win);
+      saveTrendLayout();
+      if (elEmpty) elEmpty.style.display = 'none';
+      const el = document.createElement('div');
+      el.className = 'trend-window';
+      el.dataset.id = win.id;
+      el.style.left = win.x + 'px';
+      el.style.top = win.y + 'px';
+      el.style.width = win.w + 'px';
+      el.style.height = win.h + 'px';
+      el.innerHTML = windowHTML(win);
+      elCanvas.appendChild(el);
+      win._el = el; // direct reference, avoids querySelector collision between coin/etf instances
+      attachWindowHandlers(el, win);
+      setTimeout(() => fetchAndDraw(win), 100);
+    }
+  }
+
+  return { state, save: saveTrendLayout, reset: () => state.reset(), redraw: (win) => fetchAndDraw(win) };
+}
+// ============ COIN TREND BUILDER INSTANCE ============
+function coinColor(coinId) {
+  let hash = 0;
+  for (let i = 0; i < coinId.length; i++) hash = coinId.charCodeAt(i) + ((hash << 5) - hash);
+  const hue = Math.abs(hash) % 360;
+  return `hsl(${hue}, 70%, 60%)`;
+}
+function coinGetMeta(coinId) {
+  const c = topCoins.find(x => x.id === coinId);
+  return c ? { id: coinId, label: c.symbol.toUpperCase(), color: coinColor(coinId), sublabel: c.name }
+           : { id: coinId, label: coinId, color: '#888', sublabel: coinId };
+}
+function coinRenderLibrary() {
+  const ul = document.getElementById('trends-catalog');
+  if (!ul) return;
+  if (!topCoins || topCoins.length === 0) {
+    ul.innerHTML = '<li style="font-size:11px;color:#555;font-family:ui-monospace,monospace;padding:8px;">Loading…</li>';
+    return;
+  }
+  ul.innerHTML = topCoins.map(c => {
+    const color = coinColor(c.id);
+    return `<li class="trend-source" draggable="true" data-coin-id="${c.id}" style="--coin-color: ${color}">
+      <span class="trend-source-dot"></span>
+      <span class="trend-source-label">${c.symbol.toUpperCase()}</span>
+      <span class="trend-source-rank">#${c.market_cap_rank}</span>
+    </li>`;
+  }).join('');
+  ul.querySelectorAll('.trend-source').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', el.dataset.coinId);
+      e.dataTransfer.effectAllowed = 'copy';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+  });
+}
+async function fetchCoinSeries(coinId, startDate, endDate) {
+  let url;
+  if (isEndCurrent(endDate)) {
+    const days = Math.max(1, Math.ceil((Date.now() - dateStartMs(startDate)) / 86400000));
+    const cgDays = days > 365 ? 'max' : String(days);
+    url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart?vs_currency=usd&days=${cgDays}`;
+  } else {
+    url = `https://api.coingecko.com/api/v3/coins/${coinId}/market_chart/range?vs_currency=usd&from=${Math.floor(dateStartMs(startDate) / 1000)}&to=${Math.floor(dateEndMs(endDate) / 1000)}`;
+  }
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('rate limited: ' + r.status);
+  const data = await r.json();
+  return data.prices || [];
+}
+
+const coinBuilder = createTrendBuilder({
+  libraryId: 'trends-catalog',
+  canvasId: 'trends-canvas',
+  emptyId: 'trends-canvas-empty',
+  resetBtnId: 'trend-reset-btn',
+  syncToggleId: 'trend-sync-all',
+  storageKey: 'crypto-dashboard-trends-v1',
+  renderLibrary: coinRenderLibrary,
+  getSourceMeta: coinGetMeta,
+  fetchSeries: fetchCoinSeries,
+  formatValue: fmtPrice,
+  yFormat: formatChartValue,
+  defaultSourceId: 'bitcoin',
+  defaultWindowX: 60,
+  defaultWindowY: 30,
+  confirmReset: () => confirm('Reset semua trend windows?'),
+});
+// Back-compat: other code in the page references these names
+const trendState = coinBuilder.state;
+const saveTrendLayout = coinBuilder.save;
+const resetTrends = coinBuilder.reset;
+
+// ============ ETF TREND BUILDER INSTANCE ============
+const ETF_TREND_META = {
+  btc: { id: 'btc', label: 'BTC',  color: '#f7931a', sublabel: 'Bitcoin ETF' },
+  eth: { id: 'eth', label: 'ETH',  color: '#627eea', sublabel: 'Ethereum ETF' },
+  hyp: { id: 'hyp', label: 'HYPE', color: '#a855f7', sublabel: 'Hyperliquid ETP' },
+  all: { id: 'all', label: 'ALL',  color: '#fbbf24', sublabel: 'BTC + ETH + HYPE' },
+};
+function etfTrendGetMeta(id) { return ETF_TREND_META[id] || { id, label: id, color: '#888', sublabel: id }; }
+function etfTrendRenderLibrary() {
+  const ul = document.getElementById('etf-trends-catalog');
+  if (!ul) return;
+  if (!etfState.loaded) {
+    ul.innerHTML = '<li style="font-size:11px;color:#555;font-family:ui-monospace,monospace;padding:8px;">Loading…</li>';
+    return;
+  }
+  ul.innerHTML = Object.values(ETF_TREND_META).map(s => `
+    <li class="trend-source" draggable="true" data-etf-id="${s.id}" style="--coin-color: ${s.color}">
+      <span class="trend-source-dot"></span>
+      <span class="trend-source-label">${s.label}</span>
+      <span class="trend-source-rank">${s.sublabel}</span>
+    </li>
+  `).join('');
+  ul.querySelectorAll('.trend-source').forEach(el => {
+    el.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', el.dataset.etfId);
+      e.dataTransfer.effectAllowed = 'copy';
+      el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', () => el.classList.remove('dragging'));
+  });
+}
+function etfTrendFetchSeries(sourceId, startDate, endDate) {
+  const sMs = dateStartMs(startDate);
+  const eMs = dateEndMs(endDate);
+  const toMs = (iso) => new Date(iso + 'T00:00:00Z').getTime();
+  if (sourceId === 'all') {
+    const byDate = new Map();
+    ['btc', 'eth', 'hyp'].forEach(aid => {
+      const rows = etfState.data[aid]?.rows || [];
+      rows.forEach(r => {
+        if (r.total == null) return;
+        const t = toMs(r.date);
+        if (t < sMs || t > eMs) return;
+        byDate.set(t, (byDate.get(t) || 0) + r.total);
+      });
+    });
+    return [...byDate.entries()].sort((a, b) => a[0] - b[0]);
+  }
+  const rows = etfState.data[sourceId]?.rows || [];
+  return rows
+    .filter(r => r.total != null)
+    .filter(r => {
+      const t = toMs(r.date);
+      return t >= sMs && t <= eMs;
+    })
+    .map(r => [toMs(r.date), r.total]);
+}
+function etfTrendFormatValue(v) {
+  return (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1) + 'M';
+}
+function etfTrendYFormat(v) {
+  const sign = v > 0 ? '+' : (v < 0 ? '−' : '');
+  return `${sign}${Math.abs(v).toFixed(0)}M`;
+}
+
+const etfTrendBuilder = createTrendBuilder({
+  libraryId: 'etf-trends-catalog',
+  canvasId: 'etf-trends-canvas',
+  emptyId: 'etf-trends-canvas-empty',
+  resetBtnId: 'etf-trend-reset-btn',
+  syncToggleId: 'etf-trend-sync-all',
+  storageKey: 'crypto-dashboard-etf-trends-v1',
+  renderLibrary: etfTrendRenderLibrary,
+  getSourceMeta: etfTrendGetMeta,
+  fetchSeries: async (id, s, e) => etfTrendFetchSeries(id, s, e),
+  formatValue: etfTrendFormatValue,
+  yFormat: etfTrendYFormat,
+  defaultSourceId: 'all',
+  defaultWindowX: 60,
+  defaultWindowY: 30,
+  confirmReset: () => confirm('Reset semua ETF trend windows?'),
+});
 // ============ ETF FLOWS ============
 // Loads etf-data/{btc,eth,hyp}.json — from raw.githubusercontent.com in production,
 // or relative path when running locally (e.g., python3 -m http.server).
@@ -1708,19 +1915,25 @@ function setupEtfTabs() {
 }
 
 // ============ INIT ============
-document.getElementById('trend-reset-btn').addEventListener('click', () => {
-  if (trendState.windows.length === 0) return;
-  if (confirm('Reset semua trend windows?')) resetTrends();
-});
-document.getElementById('trend-sync-all').addEventListener('change', e => {
-  trendState.applyToAll = e.target.checked;
-  saveTrendLayout();
-});
-
-// ETF section
+// === ETF section (existing tabs + data fetch) ===
 setupEtfTabs();
 fetchEtfData();
-// Redraw ETF chart on resize (debounced via rAF)
+
+// ============ ETF TREND LIBRARY READY INTERVAL ============
+// Re-render ETF trend library once ETF data is loaded, and refresh any open windows
+let _etfLibTries = 0;
+const _etfLibReady = setInterval(() => {
+  _etfLibTries++;
+  if (etfState.loaded) {
+    clearInterval(_etfLibReady);
+    etfTrendRenderLibrary();
+    etfTrendBuilder.state.series = {};
+    etfTrendBuilder.state.windows.forEach(w => etfTrendBuilder.redraw(w));
+  }
+  if (_etfLibTries > 30) clearInterval(_etfLibReady); // give up after 15s
+}, 500);
+
+// Redraw ETF chart on resize
 let _etfResizeRaf = null;
 window.addEventListener('resize', () => {
   if (_etfResizeRaf) cancelAnimationFrame(_etfResizeRaf);
@@ -1731,20 +1944,6 @@ window.addEventListener('resize', () => {
     }
   });
 });
-
-setupTrendCanvas();
-loadTrendLayout();
-// If no saved layout, pre-populate one window with BTC
-if (trendState.windows.length === 0 && topCoins.length > 0) {
-  // wait for topCoins to load first
-  const waitForCoins = setInterval(() => {
-    if (topCoins.length > 0) {
-      clearInterval(waitForCoins);
-      const btc = topCoins.find(c => c.id === 'bitcoin') || topCoins[0];
-      if (btc) createTrendWindow(btc.id, 60, 30);
-    }
-  }, 500);
-}
 </script>
 </body>
 </html>

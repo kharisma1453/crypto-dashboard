@@ -1045,8 +1045,8 @@ function drawTrendChart(win, canvas, hoverX = null) {
   if (minV === maxV) { minV -= 1; maxV += 1; }
   if (minT === maxT) { minT -= 1; maxT += 1; }
 
-  // Margins
-  const padL = 50, padR = 12, padT = 8, padB = 22;
+  // Margins (padR >= 24 to fit center-aligned "MM/DD" labels at right edge)
+  const padL = 50, padR = 24, padT = 8, padB = 22;
   const plotW = cssW - padL - padR, plotH = cssH - padT - padB;
 
   // Cache render metadata for click handler

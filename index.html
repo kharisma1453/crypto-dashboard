@@ -1579,7 +1579,38 @@ function coinRenderLibrary() {
     el.addEventListener('dragend', () => el.classList.remove('dragging'));
   });
 }
+// BTC price (blockchain.info): full history 2009-01-03 → today.
+// From raw.githubusercontent.com in production, relative path when local.
+const BTC_PRICE_URL = (location.hostname === '127.0.0.1' || location.hostname === 'localhost')
+  ? 'data'
+  : 'https://raw.githubusercontent.com/kharisma1453/crypto-dashboard/main/data';
+let btcPriceData = null; // cache full BTC price history
+async function fetchBtcPriceData() {
+  if (btcPriceData) return btcPriceData;
+  const r = await fetch(`${BTC_PRICE_URL}/btc-price.json`, { cache: 'no-cache' });
+  if (!r.ok) throw new Error('btc-price.json HTTP ' + r.status);
+  btcPriceData = await r.json();
+  return btcPriceData;
+}
 async function fetchCoinSeries(coinId, startDate, endDate) {
+  // BTC: use local Blockchain.com data (full history, no API key, no rate limit).
+  // Falls back to CoinGecko if the local file fails to load.
+  if (coinId === 'bitcoin') {
+    try {
+      const data = await fetchBtcPriceData();
+      const sMs = dateStartMs(startDate);
+      const eMs = dateEndMs(endDate);
+      return (data.rows || [])
+        .filter(row => {
+          const t = dateStartMs(row.date);
+          return t >= sMs && t <= eMs;
+        })
+        .map(row => [dateStartMs(row.date), row.price]);
+    } catch (e) {
+      console.warn('BTC price: local fetch failed, falling back to CoinGecko', e);
+    }
+  }
+  // Other coins (or BTC fallback): use CoinGecko
   let url;
   if (isEndCurrent(endDate)) {
     const days = Math.max(1, Math.ceil((Date.now() - dateStartMs(startDate)) / 86400000));

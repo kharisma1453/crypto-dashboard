@@ -479,9 +479,10 @@ async function fetchTop() {
 }
 
 function fmtPrice(n) {
-  if (n >= 1000) return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  if (n >= 1) return n.toFixed(2);
-  if (n >= 0.01) return n.toFixed(4);
+  const abs = Math.abs(n);
+  if (abs >= 1000) return (n < 0 ? '-' : '') + abs.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  if (abs >= 1) return n.toFixed(2);
+  if (abs >= 0.01) return n.toFixed(4);
   return n.toPrecision(3);
 }
 function fmtBig(n) {
@@ -1224,7 +1225,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
       const pctChange = ((dp.v - startVal) / startVal) * 100;
       tooltip.push({
         sourceId: rs.sourceId,
-        sym: (cfg.getSourceMeta(rs.coinId) || {label: rs}).label.coinId,
+        sym: (cfg.getSourceMeta(rs.sourceId) || {label: rs.sourceId}).label,
         color: rs.color,
         value: dp.v,
         pct: pctChange,
@@ -1348,7 +1349,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
           ctx.closePath();
           ctx.fill();
           measurements.push({
-            sym: (cfg.getSourceMeta(rs.coinId) || {label: rs}).label.coinId,
+            sym: (cfg.getSourceMeta(rs.sourceId) || {label: rs.sourceId}).label,
             color: rs.color,
             startVal: yStartVal,
             endVal: yEndVal,

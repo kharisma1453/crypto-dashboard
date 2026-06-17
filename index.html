@@ -77,6 +77,25 @@
   .trends-empty-icon { font-size: 32px; opacity: 0.4; }
   .trends-empty-hint { font-size: 11px; color: #444; margin-top: 6px; font-family: ui-monospace, monospace; }
 
+  /* Library toggle button (chevron stuck on canvas left edge) */
+  .library-toggle-btn {
+    position: absolute; left: 8px; top: 8px; z-index: 30;
+    width: 26px; height: 26px;
+    background: rgba(20, 20, 20, 0.9);
+    border: 1px solid #2a2a2a; border-radius: 4px;
+    color: #888; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; line-height: 1; padding: 0; font-family: inherit;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .library-toggle-btn:hover { background: #252525; color: #fff; border-color: #3a3a3a; }
+  /* Library collapsed (hidden) — first grid column collapses, chevron flips */
+  .trends-layout.library-collapsed { grid-template-columns: 0px 1fr; gap: 0; }
+  .trends-layout.library-collapsed .trends-library {
+    opacity: 0; pointer-events: none; width: 0; padding: 0; margin: 0; overflow: hidden;
+  }
+  .trends-library { transition: width 0.2s ease, opacity 0.2s ease; }
+
   .trend-window {
     background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 4px;
     position: absolute; min-width: 360px; min-height: 240px;
@@ -265,6 +284,7 @@
         <ul class="trends-catalog" id="trends-catalog"></ul>
       </aside>
       <div class="trends-canvas" id="trends-canvas">
+        <button class="library-toggle-btn" type="button" title="Show library" aria-label="Show library">›</button>
         <div class="trends-canvas-empty" id="trends-canvas-empty">
           <span class="trends-empty-icon">📊</span>
           <p>Drop coin card dari library buat mulai</p>
@@ -353,6 +373,7 @@
         <ul class="trends-catalog" id="etf-trends-catalog"></ul>
       </aside>
       <div class="trends-canvas" id="etf-trends-canvas">
+        <button class="library-toggle-btn" type="button" title="Show library" aria-label="Show library">›</button>
         <div class="trends-canvas-empty" id="etf-trends-canvas-empty">
           <span class="trends-empty-icon">📊</span>
           <p>Drop asset dari library buat mulai</p>
@@ -1595,6 +1616,29 @@ const etfTrendBuilder = createTrendBuilder({
   defaultWindowY: 30,
   confirmReset: () => confirm('Reset semua ETF trend windows?'),
 });
+
+// ---- Library toggle (default hidden, click to show) ----
+function setupLibraryToggle(canvasId, storageKey) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const layout = canvas.closest('.trends-layout');
+  const btn = canvas.querySelector('.library-toggle-btn');
+  if (!layout || !btn) return;
+  const apply = (collapsed) => {
+    layout.classList.toggle('library-collapsed', collapsed);
+    btn.textContent = collapsed ? '›' : '‹';
+    btn.title = collapsed ? 'Show library' : 'Hide library';
+    btn.setAttribute('aria-label', btn.title);
+    try { localStorage.setItem(storageKey, collapsed ? '1' : '0'); } catch (e) {}
+  };
+  // Default collapsed (hidden). Only show if user previously chose '0'.
+  let stored = null;
+  try { stored = localStorage.getItem(storageKey); } catch (e) {}
+  apply(stored !== '0');
+  btn.addEventListener('click', () => apply(!layout.classList.contains('library-collapsed')));
+}
+setupLibraryToggle('trends-canvas', 'trends-library-collapsed-coin');
+setupLibraryToggle('etf-trends-canvas', 'trends-library-collapsed-etf');
 // ============ ETF FLOWS ============
 // Loads etf-data/{btc,eth,hyp}.json — from raw.githubusercontent.com in production,
 // or relative path when running locally (e.g., python3 -m http.server).

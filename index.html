@@ -241,10 +241,64 @@
   .etf-trends-section { margin-top: 3rem; }
   .etf-pagination .page-info { color: #666; }
 
-  /* === THEME TOGGLE (light via body invert; re-invert elements that should stay dark) === */
+  /* === CHART THEME VARIABLES (light via body invert; re-invert elements that should stay dark) === */
+  :root {
+    --chart-grid: #1a1a1a;
+    --chart-axis-text: #555;
+    --chart-no-data-text: #666;
+    --chart-crosshair: rgba(255,255,255,0.35);
+    --chart-dot-stroke: #000;
+    --chart-tooltip-bg: rgba(10,10,10,0.95);
+    --chart-tooltip-border: #2a2a2a;
+    --chart-tooltip-date: #aaa;
+    --chart-tooltip-symbol: #ddd;
+    --chart-tooltip-price: #ccc;
+    --chart-tooltip-pos: #22c55e;
+    --chart-tooltip-neg: #ef4444;
+    --chart-measure-line: #fbbf24;
+    --chart-zero-line: #2a2a2a;
+    --chart-bar-pos: rgba(34,197,94,0.25);
+    --chart-bar-neg: rgba(239,68,68,0.25);
+    --chart-area-pos: rgba(34,197,94,0.12);
+    --chart-area-neg: rgba(239,68,68,0.12);
+    --chart-line-pos: #22c55e;
+    --chart-line-neg: #ef4444;
+    --chart-end-label: #fbbf24;
+    --chart-end-label-shadow: rgba(0,0,0,0.78);
+    --chart-tick-zero: #444;
+  }
+  [data-theme="light"] {
+    --chart-grid: #d4d4d4;
+    --chart-axis-text: #888;
+    --chart-no-data-text: #888;
+    --chart-crosshair: rgba(0,0,0,0.30);
+    --chart-dot-stroke: #ffffff;
+    --chart-tooltip-bg: rgba(255,255,255,0.96);
+    --chart-tooltip-border: #c8c8c8;
+    --chart-tooltip-date: #555;
+    --chart-tooltip-symbol: #1a1a1a;
+    --chart-tooltip-price: #333;
+    --chart-tooltip-pos: #16a34a;
+    --chart-tooltip-neg: #dc2626;
+    --chart-measure-line: #d97706;
+    --chart-zero-line: #b8b8b8;
+    --chart-bar-pos: rgba(22,163,74,0.40);
+    --chart-bar-neg: rgba(220,38,38,0.40);
+    --chart-area-pos: rgba(22,163,74,0.18);
+    --chart-area-neg: rgba(220,38,38,0.18);
+    --chart-line-pos: #16a34a;
+    --chart-line-neg: #dc2626;
+    --chart-end-label: #b45309;
+    --chart-end-label-shadow: rgba(255,255,255,0.85);
+    --chart-tick-zero: #999;
+  }
   [data-theme="light"] { filter: invert(1) hue-rotate(180deg); }
-  [data-theme="light"] .trend-window,
-  [data-theme="light"] .etf-chart-wrap,
+  /* Canvas pixel data must NOT be html-filtered, otherwise the colors we
+     draw via CSS vars would be double-transformed. Re-invert on the canvas
+     cancels the html filter, so drawn colors appear as-is. The trend window
+     and etf chart wrap are NOT re-inverted — they flip with the rest of
+     the page so their chrome (bg, text) matches the light chart. */
+  [data-theme="light"] canvas,
   [data-theme="light"] img { filter: invert(1) hue-rotate(180deg); }
   .theme-toggle-btn {
     background: none; border: 1px solid transparent; cursor: pointer;
@@ -1052,6 +1106,8 @@ function drawTrendChart(win, canvas, hoverX = null) {
   ctx.scale(dpr, dpr);
   ctx.clearRect(0, 0, cssW, cssH);
 
+  const C = getChartColors();
+
   const sMs = dateStartMs(win.startDate);
   const eMs = dateEndMs(win.endDate);
   // Gather series (keep raw for ruler) — filter cache by [startDate, endDate]
@@ -1062,7 +1118,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
   }).filter(s => s.data.length > 1);
 
   if (rawSeries.length === 0) {
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = C.noDataText;
     ctx.font = '11px ui-monospace, monospace';
     ctx.textAlign = 'center';
     ctx.fillText(win.loading ? 'Loading…' : 'No data', cssW / 2, cssH / 2);
@@ -1096,10 +1152,10 @@ function drawTrendChart(win, canvas, hoverX = null) {
   canvas._lastRender = { minT, maxT, minV, maxV, padL, padR, padT, padB, plotW, plotH, series, rawSeries };
 
   // Grid
-  ctx.strokeStyle = '#1a1a1a';
+  ctx.strokeStyle = C.grid;
   ctx.lineWidth = 1;
   ctx.font = '10px ui-monospace, monospace';
-  ctx.fillStyle = '#555';
+  ctx.fillStyle = C.axisText;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (let i = 0; i <= 4; i++) {
@@ -1137,7 +1193,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
     const tAtX = minT + ((hoverX - padL) / plotW) * (maxT - minT);
     // Vertical line
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.strokeStyle = C.crosshair;
     ctx.lineWidth = 1;
     ctx.setLineDash([3, 3]);
     ctx.beginPath();
@@ -1160,7 +1216,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
       ctx.beginPath();
       ctx.arc(x, y, 3.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#000';
+      ctx.strokeStyle = C.dotStroke;
       ctx.lineWidth = 1.5;
       ctx.stroke();
       // % change from start
@@ -1189,8 +1245,8 @@ function drawTrendChart(win, canvas, hoverX = null) {
     let boxY = padT + 8;
     if (boxY + boxH > padT + plotH) boxY = padT + plotH - boxH - 4;
 
-    ctx.fillStyle = 'rgba(10,10,10,0.95)';
-    ctx.strokeStyle = '#2a2a2a';
+    ctx.fillStyle = C.tooltipBg;
+    ctx.strokeStyle = C.tooltipBorder;
     ctx.lineWidth = 1;
     ctx.fillRect(boxX, boxY, boxW, boxH);
     ctx.strokeRect(boxX + 0.5, boxY + 0.5, boxW - 1, boxH - 1);
@@ -1198,7 +1254,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
     ctx.font = '10px ui-monospace, monospace';
     ctx.textBaseline = 'top';
     // Date header
-    ctx.fillStyle = '#aaa';
+    ctx.fillStyle = C.tooltipDate;
     ctx.textAlign = 'left';
     ctx.fillText(dateLbl, boxX + 8, boxY + 6);
     // Per-coin lines
@@ -1210,15 +1266,15 @@ function drawTrendChart(win, canvas, hoverX = null) {
       ctx.arc(boxX + 12, ly + 5, 3, 0, Math.PI * 2);
       ctx.fill();
       // Symbol
-      ctx.fillStyle = '#ddd';
+      ctx.fillStyle = C.tooltipSymbol;
       ctx.textAlign = 'left';
       ctx.fillText(t.sym, boxX + 20, ly);
       // Price (right-aligned)
-      ctx.fillStyle = '#ccc';
+      ctx.fillStyle = C.tooltipPrice;
       ctx.textAlign = 'right';
       ctx.fillText(win.normalized ? t.value.toFixed(1) : cfg.formatValue(t.value), boxX + boxW - 56, ly);
       // % change (right-aligned, color-coded)
-      ctx.fillStyle = t.pct >= 0 ? '#22c55e' : '#ef4444';
+      ctx.fillStyle = t.pct >= 0 ? C.tooltipPos : C.tooltipNeg;
       ctx.fillText(`${t.pct >= 0 ? '+' : ''}${t.pct.toFixed(2)}%`, boxX + boxW - 8, ly);
     });
   }
@@ -1232,7 +1288,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
       const eT = m.endT != null ? Math.max(minT, Math.min(maxT, m.endT)) : null;
       const sX = padL + ((sT - minT) / (maxT - minT)) * plotW;
       const eX = eT != null ? padL + ((eT - minT) / (maxT - minT)) * plotW : null;
-      const lineColor = '#fbbf24';
+      const lineColor = C.measureLine;
 
       // Vertical lines
       ctx.save();
@@ -1268,11 +1324,11 @@ function drawTrendChart(win, canvas, hoverX = null) {
         // Dots
         ctx.fillStyle = lineColor;
         ctx.beginPath(); ctx.arc(x1, y1, 4, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.strokeStyle = C.dotStroke; ctx.lineWidth = 1.5; ctx.stroke();
         if (x2 != null && y2 != null) {
           ctx.fillStyle = lineColor;
           ctx.beginPath(); ctx.arc(x2, y2, 4, 0, Math.PI * 2); ctx.fill();
-          ctx.strokeStyle = '#000'; ctx.lineWidth = 1.5; ctx.stroke();
+          ctx.strokeStyle = C.dotStroke; ctx.lineWidth = 1.5; ctx.stroke();
           // Connecting line
           ctx.strokeStyle = lineColor;
           ctx.lineWidth = 1.5;
@@ -1280,7 +1336,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
           // Shaded gain/loss area
           const pct = ((yEndVal - yStartVal) / yStartVal) * 100;
           const isUp = pct >= 0;
-          ctx.fillStyle = isUp ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+          ctx.fillStyle = isUp ? C.barPos : C.barNeg;
           ctx.beginPath();
           ctx.moveTo(x1, y1);
           ctx.lineTo(x2, y2);
@@ -1326,7 +1382,7 @@ function drawTrendChart(win, canvas, hoverX = null) {
       }
       const boxY = padT + 6;
 
-      ctx.fillStyle = 'rgba(10,10,10,0.95)';
+      ctx.fillStyle = C.tooltipBg;
       ctx.strokeStyle = lineColor;
       ctx.lineWidth = 1;
       ctx.fillRect(boxX, boxY, boxW, boxH);
@@ -1349,18 +1405,18 @@ function drawTrendChart(win, canvas, hoverX = null) {
         ctx.arc(boxX + 12, ly + 5, 3, 0, Math.PI * 2);
         ctx.fill();
         // Symbol
-        ctx.fillStyle = '#ddd';
+        ctx.fillStyle = C.tooltipSymbol;
         ctx.textAlign = 'left';
         ctx.fillText(m.sym, boxX + 20, ly);
         // Delta value
         const deltaText = win.normalized
           ? `${m.delta >= 0 ? '+' : ''}${m.delta.toFixed(2)}`
           : cfg.formatValue(m.delta);
-        ctx.fillStyle = '#bbb';
+        ctx.fillStyle = C.tooltipPrice;
         ctx.textAlign = 'right';
         ctx.fillText(deltaText, boxX + boxW - 64, ly);
         // % change
-        ctx.fillStyle = m.pct >= 0 ? '#22c55e' : '#ef4444';
+        ctx.fillStyle = m.pct >= 0 ? C.tooltipPos : C.tooltipNeg;
         ctx.textAlign = 'right';
         ctx.fillText(`${m.pct >= 0 ? '+' : ''}${m.pct.toFixed(2)}%`, boxX + boxW - 8, ly);
       });
@@ -1371,12 +1427,12 @@ function drawTrendChart(win, canvas, hoverX = null) {
   if (win.loading) {
     ctx.save();
     const bx = padL + plotW - 96, by = padT + 4, bw = 92, bh = 18;
-    ctx.fillStyle = 'rgba(0,0,0,0.78)';
+    ctx.fillStyle = C.endLabelShadow;
     ctx.fillRect(bx, by, bw, bh);
-    ctx.strokeStyle = '#fbbf24';
+    ctx.strokeStyle = C.endLabel;
     ctx.lineWidth = 1;
     ctx.strokeRect(bx + 0.5, by + 0.5, bw - 1, bh - 1);
-    ctx.fillStyle = '#fbbf24';
+    ctx.fillStyle = C.endLabel;
     ctx.font = '10px ui-monospace, monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1663,15 +1719,70 @@ setupLibraryToggle('trends-canvas', 'trends-library-collapsed-coin');
 setupLibraryToggle('etf-trends-canvas', 'trends-library-collapsed-etf');
 
 // ---- Theme toggle (default dark, persist to localStorage) ----
+function getChartColors() {
+  const css = getComputedStyle(document.documentElement);
+  const v = (n) => css.getPropertyValue(n).trim();
+  return {
+    grid: v('--chart-grid'),
+    axisText: v('--chart-axis-text'),
+    noDataText: v('--chart-no-data-text'),
+    crosshair: v('--chart-crosshair'),
+    dotStroke: v('--chart-dot-stroke'),
+    tooltipBg: v('--chart-tooltip-bg'),
+    tooltipBorder: v('--chart-tooltip-border'),
+    tooltipDate: v('--chart-tooltip-date'),
+    tooltipSymbol: v('--chart-tooltip-symbol'),
+    tooltipPrice: v('--chart-tooltip-price'),
+    tooltipPos: v('--chart-tooltip-pos'),
+    tooltipNeg: v('--chart-tooltip-neg'),
+    measureLine: v('--chart-measure-line'),
+    zeroLine: v('--chart-zero-line'),
+    barPos: v('--chart-bar-pos'),
+    barNeg: v('--chart-bar-neg'),
+    areaPos: v('--chart-area-pos'),
+    areaNeg: v('--chart-area-neg'),
+    linePos: v('--chart-line-pos'),
+    lineNeg: v('--chart-line-neg'),
+    endLabel: v('--chart-end-label'),
+    endLabelShadow: v('--chart-end-label-shadow'),
+    tickZero: v('--chart-tick-zero'),
+  };
+}
+function redrawAllChartsForThemeChange() {
+  // Trend builder windows (coin + ETF instances) — use the redraw method
+  // since drawTrendChart is a closure inside createTrendBuilder
+  [coinBuilder, etfTrendBuilder].forEach(builder => {
+    if (!builder || !builder.state || !builder.state.windows || !builder.redraw) return;
+    builder.state.windows.forEach(win => builder.redraw(win));
+  });
+  // ETF cumulative chart (top section) — use globalThis lookup to avoid
+  // ReferenceError on the etfState temporal dead zone during init
+  try {
+    const es = globalThis.etfState;
+    if (es && es.loaded && es.data && es.data[es.current]) {
+      const data = es.data[es.current];
+      const filtered = filterRowsByRange(data.rows || [], es.range);
+      drawEtfChart(es.current, data, filtered);
+    }
+  } catch (e) { /* etfState not yet initialized — skip */ }
+}
 (function () {
   const btn = document.getElementById('themeToggleBtn');
   if (!btn) return;
+  let firstApply = true;
   const apply = (t) => {
     if (t === 'light') document.documentElement.setAttribute('data-theme', 'light');
     else document.documentElement.removeAttribute('data-theme');
     btn.textContent = t === 'light' ? '☀' : '☾';
     btn.title = t === 'light' ? 'Switch to dark theme' : 'Switch to light theme';
     try { localStorage.setItem('theme-preference', t); } catch (e) {}
+    // Re-render charts with new theme colors — but only on user toggles,
+    // not on the initial apply (etfState / chart series may not be ready yet
+    // and will pick up the correct colors on their normal draw path).
+    if (!firstApply) {
+      try { redrawAllChartsForThemeChange(); } catch (e) { console.error('Theme redraw failed:', e); }
+    }
+    firstApply = false;
   };
   let stored = 'dark';
   try { stored = localStorage.getItem('theme-preference') || 'dark'; } catch (e) {}
@@ -1864,10 +1975,12 @@ function drawEtfChart(assetId, data, filteredRows) {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
 
+  const C = getChartColors();
+
   // Cumulative: start at 0, add each daily total in chronological order
   const rows = (filteredRows || data.rows || []).filter(r => r.total != null).sort((a, b) => a.date.localeCompare(b.date));
   if (rows.length === 0) {
-    ctx.fillStyle = '#666';
+    ctx.fillStyle = C.noDataText;
     ctx.font = '11px ui-monospace, monospace';
     ctx.textAlign = 'center';
     ctx.fillText('No data', cssW / 2, cssH / 2);
@@ -1885,10 +1998,10 @@ function drawEtfChart(assetId, data, filteredRows) {
   const plotW = cssW - padL - padR, plotH = cssH - padT - padB;
 
   // Y axis labels (5 ticks)
-  ctx.strokeStyle = '#1a1a1a';
+  ctx.strokeStyle = C.grid;
   ctx.lineWidth = 1;
   ctx.font = '10px ui-monospace, monospace';
-  ctx.fillStyle = '#555';
+  ctx.fillStyle = C.axisText;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   for (let i = 0; i <= 4; i++) {
@@ -1912,7 +2025,7 @@ function drawEtfChart(assetId, data, filteredRows) {
 
   // Zero line
   const zeroY = padT + (1 - (0 - minV) / (maxV - minV)) * plotH;
-  ctx.strokeStyle = '#2a2a2a';
+  ctx.strokeStyle = C.zeroLine;
   ctx.setLineDash([3, 3]);
   ctx.beginPath(); ctx.moveTo(padL, zeroY); ctx.lineTo(cssW - padR, zeroY); ctx.stroke();
   ctx.setLineDash([]);
@@ -1933,7 +2046,7 @@ function drawEtfChart(assetId, data, filteredRows) {
   ctx.lineTo(lastX, zeroY);
   ctx.lineTo(padL, zeroY);
   ctx.closePath();
-  ctx.fillStyle = endingPos ? 'rgba(34,197,94,0.12)' : 'rgba(239,68,68,0.12)';
+  ctx.fillStyle = endingPos ? C.areaPos : C.areaNeg;
   ctx.fill();
 
   // Cumulative line itself
@@ -1943,7 +2056,7 @@ function drawEtfChart(assetId, data, filteredRows) {
     const y = padT + (1 - (p.v - minV) / Math.max(0.0001, maxV - minV)) * plotH;
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   });
-  ctx.strokeStyle = endingPos ? '#22c55e' : '#ef4444';
+  ctx.strokeStyle = endingPos ? C.linePos : C.lineNeg;
   ctx.lineWidth = 1.8;
   ctx.stroke();
 
@@ -1952,7 +2065,7 @@ function drawEtfChart(assetId, data, filteredRows) {
   series.forEach(p => {
     const x = padL + ((p.t - minT) / Math.max(1, maxT - minT)) * plotW;
     const yDaily = padT + (1 - (p.daily - minV) / Math.max(0.0001, maxV - minV)) * plotH;
-    ctx.fillStyle = p.daily >= 0 ? 'rgba(34,197,94,0.25)' : 'rgba(239,68,68,0.25)';
+    ctx.fillStyle = p.daily >= 0 ? C.barPos : C.barNeg;
     ctx.fillRect(x - barW / 2, yDaily, barW, zeroY - yDaily);
   });
 
@@ -1960,15 +2073,15 @@ function drawEtfChart(assetId, data, filteredRows) {
   const lastP = series[series.length - 1];
   const lx = padL + plotW;
   const ly = padT + (1 - (lastP.v - minV) / Math.max(0.0001, maxV - minV)) * plotH;
-  ctx.fillStyle = endingPos ? '#22c55e' : '#ef4444';
+  ctx.fillStyle = endingPos ? C.linePos : C.lineNeg;
   ctx.beginPath(); ctx.arc(lx, ly, 3, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#000';
+  ctx.strokeStyle = C.dotStroke;
   ctx.lineWidth = 1.2;
   ctx.stroke();
   // Label
   const labelText = `${endingPos ? '+' : '−'}${Math.abs(lastP.v).toFixed(0)}M`;
   ctx.font = '10px ui-monospace, monospace';
-  ctx.fillStyle = endingPos ? '#22c55e' : '#ef4444';
+  ctx.fillStyle = endingPos ? C.linePos : C.lineNeg;
   ctx.textAlign = 'right';
   ctx.textBaseline = 'middle';
   ctx.fillText(labelText, lx - 6, ly - 10);

@@ -1579,25 +1579,49 @@ function coinRenderLibrary() {
     el.addEventListener('dragend', () => el.classList.remove('dragging'));
   });
 }
-// BTC price (blockchain.info): full history 2009-01-03 → today.
-// From raw.githubusercontent.com in production, relative path when local.
-const BTC_PRICE_URL = (location.hostname === '127.0.0.1' || location.hostname === 'localhost')
+
+// Local coin price data (full history per coin, from daily cron scrapers).
+// Each file is at data/{filename}.json with {source, scrapedAt, lastUpdated, rows: [{date, price}]}.
+// Maps coinId (from CoinGecko top 15) to the local JSON filename.
+const COIN_PRICE_FILES = {
+  'bitcoin':      'btc-price.json',         // Blockchain.com, 2009+
+  'ethereum':     'eth-price.json',         // Binance,  2017-08+
+  'tether':       'usdt-price.json',        // CoinGecko 365d (stablecoin)
+  'binancecoin':  'bnb-price.json',         // Binance,  2017-11+
+  'usd-coin':     'usdc-price.json',        // CoinGecko 365d (stablecoin)
+  'ripple':       'xrp-price.json',         // Binance,  2018-05+
+  'solana':       'sol-price.json',         // Binance,  2020-08+
+  'tron':         'trx-price.json',         // Binance,  2018-06+
+  'figure-heloc': 'figure-heloc-price.json',// CoinGecko 365d
+  'hyperliquid':  'hype-price.json',        // CoinGecko 365d
+  'dogecoin':     'doge-price.json',        // Binance,  2019-07+
+  'usds':         'usds-price.json',        // CoinGecko 365d (stablecoin)
+  'rain':         'rain-price.json',        // CoinGecko 365d
+  'leo-token':    'leo-price.json',         // CoinGecko 365d
+  'zcash':        'zec-price.json',         // Binance,  2019-03+
+};
+// Base path: relative when local, raw.githubusercontent.com in production.
+const PRICE_DATA_BASE = (location.hostname === '127.0.0.1' || location.hostname === 'localhost')
   ? 'data'
   : 'https://raw.githubusercontent.com/kharisma1453/crypto-dashboard/main/data';
-let btcPriceData = null; // cache full BTC price history
-async function fetchBtcPriceData() {
-  if (btcPriceData) return btcPriceData;
-  const r = await fetch(`${BTC_PRICE_URL}/btc-price.json`, { cache: 'no-cache' });
-  if (!r.ok) throw new Error('btc-price.json HTTP ' + r.status);
-  btcPriceData = await r.json();
-  return btcPriceData;
+
+const localPriceCache = {}; // coinId -> parsed JSON
+async function fetchLocalCoinData(coinId) {
+  if (localPriceCache[coinId]) return localPriceCache[coinId];
+  const filename = COIN_PRICE_FILES[coinId];
+  if (!filename) throw new Error(`no local file mapped for ${coinId}`);
+  const r = await fetch(`${PRICE_DATA_BASE}/${filename}`, { cache: 'no-cache' });
+  if (!r.ok) throw new Error(`${filename} HTTP ${r.status}`);
+  localPriceCache[coinId] = await r.json();
+  return localPriceCache[coinId];
 }
+
 async function fetchCoinSeries(coinId, startDate, endDate) {
-  // BTC: use local Blockchain.com data (full history, no API key, no rate limit).
+  // For coins with local data files, use them (full history, no API key, no rate limit).
   // Falls back to CoinGecko if the local file fails to load.
-  if (coinId === 'bitcoin') {
+  if (COIN_PRICE_FILES[coinId]) {
     try {
-      const data = await fetchBtcPriceData();
+      const data = await fetchLocalCoinData(coinId);
       const sMs = dateStartMs(startDate);
       const eMs = dateEndMs(endDate);
       return (data.rows || [])
@@ -1607,10 +1631,10 @@ async function fetchCoinSeries(coinId, startDate, endDate) {
         })
         .map(row => [dateStartMs(row.date), row.price]);
     } catch (e) {
-      console.warn('BTC price: local fetch failed, falling back to CoinGecko', e);
+      console.warn(`${coinId} price: local fetch failed, falling back to CoinGecko`, e);
     }
   }
-  // Other coins (or BTC fallback): use CoinGecko
+  // Other coins (or local fallback): use CoinGecko
   let url;
   if (isEndCurrent(endDate)) {
     const days = Math.max(1, Math.ceil((Date.now() - dateStartMs(startDate)) / 86400000));
